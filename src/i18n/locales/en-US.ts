@@ -86,6 +86,13 @@ export default {
     connected: 'Connected',
     disconnected: 'Disconnected',
     connectionFailed: 'Connection failed',
+    refreshDevices: 'Refresh Devices',
+    refresh: 'Refresh Devices',
+    connect: 'Connect',
+    disconnect: 'Disconnect',
+    selectDevice: 'Select a device',
+    noDevices: 'No devices found',
+    playcoverHint: 'Enter PlayCover app listen address',
   },
 
   // Resource
@@ -95,6 +102,16 @@ export default {
     loading: 'Loading resource...',
     loaded: 'Resource loaded',
     loadFailed: 'Failed to load resource',
+    loadResource: 'Load Resource',
+  },
+
+  // MaaFramework
+  maa: {
+    notInitialized: 'MaaFramework not initialized',
+    initFailed: 'Initialization failed',
+    version: 'Version',
+    needConnection: 'Please connect a device first',
+    needResource: 'Please load resources first',
   },
 
   // Screenshot preview

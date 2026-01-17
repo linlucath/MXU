@@ -86,6 +86,13 @@ export default {
     connected: '已连接',
     disconnected: '未连接',
     connectionFailed: '连接失败',
+    refreshDevices: '刷新设备',
+    refresh: '刷新设备',
+    connect: '连接',
+    disconnect: '断开连接',
+    selectDevice: '请选择设备',
+    noDevices: '未找到设备',
+    playcoverHint: '输入 PlayCover 应用监听地址',
   },
 
   // 资源
@@ -95,6 +102,16 @@ export default {
     loading: '加载资源中...',
     loaded: '资源已加载',
     loadFailed: '资源加载失败',
+    loadResource: '加载资源',
+  },
+
+  // MaaFramework
+  maa: {
+    notInitialized: 'MaaFramework 未初始化',
+    initFailed: '初始化失败',
+    version: '版本',
+    needConnection: '请先连接设备',
+    needResource: '请先加载资源',
   },
 
   // 截图预览

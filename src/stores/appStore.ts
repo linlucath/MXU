@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { ProjectInterface, Instance, SelectedTask, OptionValue, TaskItem, OptionDefinition } from '@/types/interface';
 import type { MxuConfig } from '@/types/config';
+import type { ConnectionStatus, TaskStatus } from '@/types/maa';
 import { saveConfig } from '@/services/configService';
 
 export type Theme = 'light' | 'dark';
@@ -59,6 +60,28 @@ interface AppState {
   
   // 配置导入
   importConfig: (config: MxuConfig) => void;
+
+  // MaaFramework 状态
+  maaInitialized: boolean;
+  maaVersion: string | null;
+  setMaaInitialized: (initialized: boolean, version?: string) => void;
+  
+  // 实例运行时状态
+  instanceConnectionStatus: Record<string, ConnectionStatus>;
+  instanceResourceLoaded: Record<string, boolean>;
+  instanceCurrentTaskId: Record<string, number | null>;
+  instanceTaskStatus: Record<string, TaskStatus | null>;
+  
+  setInstanceConnectionStatus: (instanceId: string, status: ConnectionStatus) => void;
+  setInstanceResourceLoaded: (instanceId: string, loaded: boolean) => void;
+  setInstanceCurrentTaskId: (instanceId: string, taskId: number | null) => void;
+  setInstanceTaskStatus: (instanceId: string, status: TaskStatus | null) => void;
+  
+  // 选中的控制器和资源
+  selectedController: Record<string, string>;
+  selectedResource: Record<string, string>;
+  setSelectedController: (instanceId: string, controllerId: string) => void;
+  setSelectedResource: (instanceId: string, resourceId: string) => void;
 }
 
 // 生成唯一 ID
@@ -363,6 +386,66 @@ export const useAppStore = create<AppState>()(
         document.documentElement.classList.toggle('dark', config.settings.theme === 'dark');
         localStorage.setItem('mxu-language', config.settings.language);
       },
+
+      // MaaFramework 状态
+      maaInitialized: false,
+      maaVersion: null,
+      setMaaInitialized: (initialized, version) => set({
+        maaInitialized: initialized,
+        maaVersion: version || null,
+      }),
+
+      // 实例运行时状态
+      instanceConnectionStatus: {},
+      instanceResourceLoaded: {},
+      instanceCurrentTaskId: {},
+      instanceTaskStatus: {},
+
+      setInstanceConnectionStatus: (instanceId, status) => set((state) => ({
+        instanceConnectionStatus: {
+          ...state.instanceConnectionStatus,
+          [instanceId]: status,
+        },
+      })),
+
+      setInstanceResourceLoaded: (instanceId, loaded) => set((state) => ({
+        instanceResourceLoaded: {
+          ...state.instanceResourceLoaded,
+          [instanceId]: loaded,
+        },
+      })),
+
+      setInstanceCurrentTaskId: (instanceId, taskId) => set((state) => ({
+        instanceCurrentTaskId: {
+          ...state.instanceCurrentTaskId,
+          [instanceId]: taskId,
+        },
+      })),
+
+      setInstanceTaskStatus: (instanceId, status) => set((state) => ({
+        instanceTaskStatus: {
+          ...state.instanceTaskStatus,
+          [instanceId]: status,
+        },
+      })),
+
+      // 选中的控制器和资源
+      selectedController: {},
+      selectedResource: {},
+
+      setSelectedController: (instanceId, controllerId) => set((state) => ({
+        selectedController: {
+          ...state.selectedController,
+          [instanceId]: controllerId,
+        },
+      })),
+
+      setSelectedResource: (instanceId, resourceId) => set((state) => ({
+        selectedResource: {
+          ...state.selectedResource,
+          [instanceId]: resourceId,
+        },
+      })),
     })
   )
 );

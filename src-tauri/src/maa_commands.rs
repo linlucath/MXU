@@ -1,0 +1,677 @@
+//! Tauri 命令实现
+//! 
+//! 提供前端调用的 MaaFramework 功能接口
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use serde::{Deserialize, Serialize};
+use tauri::State;
+
+use crate::maa_ffi::*;
+
+// ============================================================================
+// 数据类型定义
+// ============================================================================
+
+/// ADB 设备信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdbDevice {
+    pub name: String,
+    pub adb_path: String,
+    pub address: String,
+    pub screencap_methods: u64,
+    pub input_methods: u64,
+    pub config: String,
+}
+
+/// Win32 窗口信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Win32Window {
+    pub handle: u64,
+    pub class_name: String,
+    pub window_name: String,
+}
+
+/// 控制器类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ControllerConfig {
+    Adb {
+        adb_path: String,
+        address: String,
+        screencap_methods: u64,
+        input_methods: u64,
+        config: String,
+    },
+    Win32 {
+        handle: u64,
+        screencap_method: u64,
+        mouse_method: u64,
+        keyboard_method: u64,
+    },
+    Gamepad {
+        handle: u64,
+        #[serde(default)]
+        gamepad_type: Option<String>,
+        #[serde(default)]
+        screencap_method: Option<u64>,
+    },
+    PlayCover {
+        address: String,
+    },
+}
+
+/// 连接状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ConnectionStatus {
+    Disconnected,
+    Connecting,
+    Connected,
+    Failed(String),
+}
+
+/// 任务状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TaskStatus {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+}
+
+/// 实例运行时状态
+#[derive(Debug)]
+pub struct InstanceRuntime {
+    pub resource: Option<*mut MaaResource>,
+    pub controller: Option<*mut MaaController>,
+    pub tasker: Option<*mut MaaTasker>,
+    pub connection_status: ConnectionStatus,
+    pub resource_loaded: bool,
+}
+
+// 为原始指针实现 Send 和 Sync
+// MaaFramework 的 API 是线程安全的
+unsafe impl Send for InstanceRuntime {}
+unsafe impl Sync for InstanceRuntime {}
+
+impl Default for InstanceRuntime {
+    fn default() -> Self {
+        Self {
+            resource: None,
+            controller: None,
+            tasker: None,
+            connection_status: ConnectionStatus::Disconnected,
+            resource_loaded: false,
+        }
+    }
+}
+
+impl Drop for InstanceRuntime {
+    fn drop(&mut self) {
+        if let Ok(guard) = MAA_LIBRARY.lock() {
+            if let Some(lib) = guard.as_ref() {
+                unsafe {
+                    if let Some(tasker) = self.tasker.take() {
+                        (lib.maa_tasker_destroy)(tasker);
+                    }
+                    if let Some(controller) = self.controller.take() {
+                        (lib.maa_controller_destroy)(controller);
+                    }
+                    if let Some(resource) = self.resource.take() {
+                        (lib.maa_resource_destroy)(resource);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// MaaFramework 运行时状态
+pub struct MaaState {
+    pub lib_dir: Mutex<Option<PathBuf>>,
+    pub resource_dir: Mutex<Option<PathBuf>>,
+    pub instances: Mutex<HashMap<String, InstanceRuntime>>,
+}
+
+impl Default for MaaState {
+    fn default() -> Self {
+        Self {
+            lib_dir: Mutex::new(None),
+            resource_dir: Mutex::new(None),
+            instances: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+// ============================================================================
+// Tauri 命令
+// ============================================================================
+
+/// 初始化 MaaFramework
+#[tauri::command]
+pub fn maa_init(state: State<MaaState>, lib_dir: String) -> Result<String, String> {
+    let lib_path = PathBuf::from(&lib_dir);
+    
+    init_maa_library(&lib_path)?;
+    
+    let version = get_maa_version().unwrap_or_default();
+    
+    *state.lib_dir.lock().map_err(|e| e.to_string())? = Some(lib_path);
+    
+    Ok(version)
+}
+
+/// 设置资源目录
+#[tauri::command]
+pub fn maa_set_resource_dir(state: State<MaaState>, resource_dir: String) -> Result<(), String> {
+    *state.resource_dir.lock().map_err(|e| e.to_string())? = Some(PathBuf::from(resource_dir));
+    Ok(())
+}
+
+/// 获取 MaaFramework 版本
+#[tauri::command]
+pub fn maa_get_version() -> Result<String, String> {
+    get_maa_version().ok_or_else(|| "MaaFramework not initialized".to_string())
+}
+
+/// 查找 ADB 设备
+#[tauri::command]
+pub fn maa_find_adb_devices() -> Result<Vec<AdbDevice>, String> {
+    println!("[MaaCommands] maa_find_adb_devices called");
+    
+    let guard = MAA_LIBRARY.lock().map_err(|e| {
+        println!("[MaaCommands] Failed to lock MAA_LIBRARY: {}", e);
+        e.to_string()
+    })?;
+    
+    let lib = guard.as_ref().ok_or_else(|| {
+        println!("[MaaCommands] MaaFramework not initialized");
+        "MaaFramework not initialized".to_string()
+    })?;
+    
+    println!("[MaaCommands] MaaFramework library loaded");
+    
+    unsafe {
+        println!("[MaaCommands] Creating ADB device list...");
+        let list = (lib.maa_toolkit_adb_device_list_create)();
+        if list.is_null() {
+            println!("[MaaCommands] Failed to create device list (null pointer)");
+            return Err("Failed to create device list".to_string());
+        }
+        println!("[MaaCommands] Device list created successfully");
+        
+        // 确保清理
+        struct ListGuard<'a> {
+            list: *mut MaaToolkitAdbDeviceList,
+            lib: &'a MaaLibrary,
+        }
+        impl Drop for ListGuard<'_> {
+            fn drop(&mut self) {
+                println!("[MaaCommands] Destroying ADB device list...");
+                unsafe { (self.lib.maa_toolkit_adb_device_list_destroy)(self.list); }
+            }
+        }
+        let _guard = ListGuard { list, lib };
+        
+        println!("[MaaCommands] Calling MaaToolkitAdbDeviceFind...");
+        let found = (lib.maa_toolkit_adb_device_find)(list);
+        println!("[MaaCommands] MaaToolkitAdbDeviceFind returned: {}", found);
+        
+        // MaaToolkitAdbDeviceFind 只在 buffer 为 null 时返回 false
+        // 即使没找到设备也会返回 true，所以不应该用返回值判断是否找到设备
+        if found == 0 {
+            println!("[MaaCommands] MaaToolkitAdbDeviceFind returned false (unexpected)");
+            // 继续执行而不是直接返回，检查 list size
+        }
+        
+        let size = (lib.maa_toolkit_adb_device_list_size)(list);
+        println!("[MaaCommands] Found {} ADB device(s)", size);
+        
+        let mut devices = Vec::with_capacity(size as usize);
+        
+        for i in 0..size {
+            let device = (lib.maa_toolkit_adb_device_list_at)(list, i);
+            if device.is_null() {
+                println!("[MaaCommands] Device at index {} is null, skipping", i);
+                continue;
+            }
+            
+            let name = from_cstr((lib.maa_toolkit_adb_device_get_name)(device));
+            let adb_path = from_cstr((lib.maa_toolkit_adb_device_get_adb_path)(device));
+            let address = from_cstr((lib.maa_toolkit_adb_device_get_address)(device));
+            
+            println!("[MaaCommands] Device {}: name='{}', adb_path='{}', address='{}'", i, name, adb_path, address);
+            
+            devices.push(AdbDevice {
+                name,
+                adb_path,
+                address,
+                screencap_methods: (lib.maa_toolkit_adb_device_get_screencap_methods)(device),
+                input_methods: (lib.maa_toolkit_adb_device_get_input_methods)(device),
+                config: from_cstr((lib.maa_toolkit_adb_device_get_config)(device)),
+            });
+        }
+        
+        println!("[MaaCommands] Returning {} device(s)", devices.len());
+        Ok(devices)
+    }
+}
+
+/// 查找 Win32 窗口
+#[tauri::command]
+pub fn maa_find_win32_windows(class_regex: Option<String>, window_regex: Option<String>) -> Result<Vec<Win32Window>, String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    unsafe {
+        let list = (lib.maa_toolkit_desktop_window_list_create)();
+        if list.is_null() {
+            return Err("Failed to create window list".to_string());
+        }
+        
+        struct ListGuard<'a> {
+            list: *mut MaaToolkitDesktopWindowList,
+            lib: &'a MaaLibrary,
+        }
+        impl Drop for ListGuard<'_> {
+            fn drop(&mut self) {
+                unsafe { (self.lib.maa_toolkit_desktop_window_list_destroy)(self.list); }
+            }
+        }
+        let _guard = ListGuard { list, lib };
+        
+        let found = (lib.maa_toolkit_desktop_window_find_all)(list);
+        if found == 0 {
+            return Ok(Vec::new());
+        }
+        
+        let size = (lib.maa_toolkit_desktop_window_list_size)(list);
+        let mut windows = Vec::with_capacity(size as usize);
+        
+        // 编译正则表达式
+        let class_re = class_regex.as_ref().and_then(|r| regex::Regex::new(r).ok());
+        let window_re = window_regex.as_ref().and_then(|r| regex::Regex::new(r).ok());
+        
+        for i in 0..size {
+            let window = (lib.maa_toolkit_desktop_window_list_at)(list, i);
+            if window.is_null() {
+                continue;
+            }
+            
+            let class_name = from_cstr((lib.maa_toolkit_desktop_window_get_class_name)(window));
+            let window_name = from_cstr((lib.maa_toolkit_desktop_window_get_window_name)(window));
+            
+            // 过滤
+            if let Some(re) = &class_re {
+                if !re.is_match(&class_name) {
+                    continue;
+                }
+            }
+            if let Some(re) = &window_re {
+                if !re.is_match(&window_name) {
+                    continue;
+                }
+            }
+            
+            let handle = (lib.maa_toolkit_desktop_window_get_handle)(window);
+            
+            windows.push(Win32Window {
+                handle: handle as u64,
+                class_name,
+                window_name,
+            });
+        }
+        
+        Ok(windows)
+    }
+}
+
+/// 创建实例
+#[tauri::command]
+pub fn maa_create_instance(state: State<MaaState>, instance_id: String) -> Result<(), String> {
+    let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+    
+    if instances.contains_key(&instance_id) {
+        return Err("Instance already exists".to_string());
+    }
+    
+    instances.insert(instance_id, InstanceRuntime::default());
+    Ok(())
+}
+
+/// 销毁实例
+#[tauri::command]
+pub fn maa_destroy_instance(state: State<MaaState>, instance_id: String) -> Result<(), String> {
+    let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+    instances.remove(&instance_id);
+    Ok(())
+}
+
+/// 连接控制器
+#[tauri::command]
+pub async fn maa_connect_controller(
+    state: State<'_, MaaState>,
+    instance_id: String,
+    config: ControllerConfig,
+    agent_path: Option<String>,
+) -> Result<(), String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let controller = unsafe {
+        match &config {
+            ControllerConfig::Adb { adb_path, address, screencap_methods, input_methods, config } => {
+                let adb_path_c = to_cstring(adb_path);
+                let address_c = to_cstring(address);
+                let config_c = to_cstring(config);
+                let agent_path_c = to_cstring(agent_path.as_deref().unwrap_or(""));
+                
+                (lib.maa_adb_controller_create)(
+                    adb_path_c.as_ptr(),
+                    address_c.as_ptr(),
+                    *screencap_methods,
+                    *input_methods,
+                    config_c.as_ptr(),
+                    agent_path_c.as_ptr(),
+                )
+            }
+            ControllerConfig::Win32 { handle, screencap_method, mouse_method, keyboard_method } => {
+                (lib.maa_win32_controller_create)(
+                    *handle as *mut std::ffi::c_void,
+                    *screencap_method,
+                    *mouse_method,
+                    *keyboard_method,
+                )
+            }
+            ControllerConfig::Gamepad { handle, gamepad_type, screencap_method } => {
+                // 解析 gamepad_type，默认为 Xbox360
+                let gp_type = match gamepad_type.as_deref() {
+                    Some("DualShock4") | Some("DS4") => MAA_GAMEPAD_TYPE_DUALSHOCK4,
+                    _ => MAA_GAMEPAD_TYPE_XBOX360,
+                };
+                // 截图方法，默认为 DXGI_DesktopDup
+                let screencap = screencap_method.unwrap_or(MAA_WIN32_SCREENCAP_DXGI_DESKTOPDUP);
+                
+                (lib.maa_gamepad_controller_create)(
+                    *handle as *mut std::ffi::c_void,
+                    gp_type,
+                    screencap,
+                )
+            }
+            ControllerConfig::PlayCover { .. } => {
+                // PlayCover 仅支持 macOS
+                return Err("PlayCover controller is only supported on macOS".to_string());
+            }
+        }
+    };
+    
+    if controller.is_null() {
+        return Err("Failed to create controller".to_string());
+    }
+    
+    // 设置默认截图分辨率
+    unsafe {
+        let short_side: i32 = 720;
+        (lib.maa_controller_set_option)(
+            controller,
+            MAA_CTRL_OPTION_SCREENSHOT_TARGET_SHORT_SIDE,
+            &short_side as *const i32 as *const std::ffi::c_void,
+            std::mem::size_of::<i32>() as u64,
+        );
+    }
+    
+    // 发起连接
+    let conn_id = unsafe { (lib.maa_controller_post_connection)(controller) };
+    
+    // 更新实例状态
+    {
+        let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
+        
+        // 清理旧的控制器
+        if let Some(old_controller) = instance.controller.take() {
+            unsafe { (lib.maa_controller_destroy)(old_controller); }
+        }
+        
+        instance.controller = Some(controller);
+        instance.connection_status = ConnectionStatus::Connecting;
+    }
+    
+    // 释放锁后等待连接
+    drop(guard);
+    
+    // 等待连接完成（在实际应用中应该使用异步轮询）
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let status = unsafe { (lib.maa_controller_wait)(controller, conn_id) };
+    
+    let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+    let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
+    
+    if status == MAA_STATUS_SUCCEEDED {
+        instance.connection_status = ConnectionStatus::Connected;
+        Ok(())
+    } else {
+        instance.connection_status = ConnectionStatus::Failed("Connection failed".to_string());
+        Err("Controller connection failed".to_string())
+    }
+}
+
+/// 获取连接状态
+#[tauri::command]
+pub fn maa_get_connection_status(state: State<MaaState>, instance_id: String) -> Result<ConnectionStatus, String> {
+    let instances = state.instances.lock().map_err(|e| e.to_string())?;
+    let instance = instances.get(&instance_id).ok_or("Instance not found")?;
+    Ok(instance.connection_status.clone())
+}
+
+/// 加载资源
+#[tauri::command]
+pub async fn maa_load_resource(
+    state: State<'_, MaaState>,
+    instance_id: String,
+    paths: Vec<String>,
+) -> Result<(), String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    // 创建或获取资源
+    let resource = {
+        let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
+        
+        if instance.resource.is_none() {
+            let res = unsafe { (lib.maa_resource_create)() };
+            if res.is_null() {
+                return Err("Failed to create resource".to_string());
+            }
+            instance.resource = Some(res);
+        }
+        
+        instance.resource.unwrap()
+    };
+    
+    // 加载资源
+    let mut last_id = MAA_INVALID_ID;
+    for path in &paths {
+        let path_c = to_cstring(path);
+        last_id = unsafe { (lib.maa_resource_post_bundle)(resource, path_c.as_ptr()) };
+    }
+    
+    // 释放锁后等待
+    drop(guard);
+    
+    // 等待资源加载
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let status = unsafe { (lib.maa_resource_wait)(resource, last_id) };
+    
+    let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+    let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
+    
+    if status == MAA_STATUS_SUCCEEDED {
+        instance.resource_loaded = true;
+        Ok(())
+    } else {
+        instance.resource_loaded = false;
+        Err("Resource loading failed".to_string())
+    }
+}
+
+/// 检查资源是否已加载
+#[tauri::command]
+pub fn maa_is_resource_loaded(state: State<MaaState>, instance_id: String) -> Result<bool, String> {
+    let instances = state.instances.lock().map_err(|e| e.to_string())?;
+    let instance = instances.get(&instance_id).ok_or("Instance not found")?;
+    Ok(instance.resource_loaded)
+}
+
+/// 运行任务
+#[tauri::command]
+pub async fn maa_run_task(
+    state: State<'_, MaaState>,
+    instance_id: String,
+    entry: String,
+    pipeline_override: String,
+) -> Result<i64, String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let (_resource, _controller, tasker) = {
+        let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get_mut(&instance_id).ok_or("Instance not found")?;
+        
+        let resource = instance.resource.ok_or("Resource not loaded")?;
+        let controller = instance.controller.ok_or("Controller not connected")?;
+        
+        // 创建或获取 tasker
+        if instance.tasker.is_none() {
+            let tasker = unsafe { (lib.maa_tasker_create)() };
+            if tasker.is_null() {
+                return Err("Failed to create tasker".to_string());
+            }
+            
+            // 绑定资源和控制器
+            unsafe {
+                (lib.maa_tasker_bind_resource)(tasker, resource);
+                (lib.maa_tasker_bind_controller)(tasker, controller);
+            }
+            
+            instance.tasker = Some(tasker);
+        }
+        
+        (resource, controller, instance.tasker.unwrap())
+    };
+    
+    // 检查初始化状态
+    let inited = unsafe { (lib.maa_tasker_inited)(tasker) };
+    if inited == 0 {
+        return Err("Tasker not properly initialized".to_string());
+    }
+    
+    // 提交任务
+    let entry_c = to_cstring(&entry);
+    let override_c = to_cstring(&pipeline_override);
+    
+    let task_id = unsafe {
+        (lib.maa_tasker_post_task)(tasker, entry_c.as_ptr(), override_c.as_ptr())
+    };
+    
+    if task_id == MAA_INVALID_ID {
+        return Err("Failed to post task".to_string());
+    }
+    
+    Ok(task_id)
+}
+
+/// 等待任务完成
+#[tauri::command]
+pub async fn maa_wait_task(
+    state: State<'_, MaaState>,
+    instance_id: String,
+    task_id: i64,
+) -> Result<TaskStatus, String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let tasker = {
+        let instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get(&instance_id).ok_or("Instance not found")?;
+        instance.tasker.ok_or("Tasker not created")?
+    };
+    
+    let status = unsafe { (lib.maa_tasker_wait)(tasker, task_id) };
+    
+    Ok(match status {
+        MAA_STATUS_PENDING => TaskStatus::Pending,
+        MAA_STATUS_RUNNING => TaskStatus::Running,
+        MAA_STATUS_SUCCEEDED => TaskStatus::Succeeded,
+        _ => TaskStatus::Failed,
+    })
+}
+
+/// 获取任务状态
+#[tauri::command]
+pub fn maa_get_task_status(
+    state: State<MaaState>,
+    instance_id: String,
+    task_id: i64,
+) -> Result<TaskStatus, String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let tasker = {
+        let instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get(&instance_id).ok_or("Instance not found")?;
+        instance.tasker.ok_or("Tasker not created")?
+    };
+    
+    let status = unsafe { (lib.maa_tasker_status)(tasker, task_id) };
+    
+    Ok(match status {
+        MAA_STATUS_PENDING => TaskStatus::Pending,
+        MAA_STATUS_RUNNING => TaskStatus::Running,
+        MAA_STATUS_SUCCEEDED => TaskStatus::Succeeded,
+        _ => TaskStatus::Failed,
+    })
+}
+
+/// 停止任务
+#[tauri::command]
+pub fn maa_stop_task(state: State<MaaState>, instance_id: String) -> Result<(), String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let tasker = {
+        let instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get(&instance_id).ok_or("Instance not found")?;
+        instance.tasker.ok_or("Tasker not created")?
+    };
+    
+    unsafe { (lib.maa_tasker_post_stop)(tasker) };
+    
+    Ok(())
+}
+
+/// 检查是否正在运行
+#[tauri::command]
+pub fn maa_is_running(state: State<MaaState>, instance_id: String) -> Result<bool, String> {
+    let guard = MAA_LIBRARY.lock().map_err(|e| e.to_string())?;
+    let lib = guard.as_ref().ok_or("MaaFramework not initialized")?;
+    
+    let tasker = {
+        let instances = state.instances.lock().map_err(|e| e.to_string())?;
+        let instance = instances.get(&instance_id).ok_or("Instance not found")?;
+        match instance.tasker {
+            Some(t) => t,
+            None => return Ok(false),
+        }
+    };
+    
+    let running = unsafe { (lib.maa_tasker_running)(tasker) };
+    Ok(running != 0)
+}

@@ -9,6 +9,38 @@ const isTauri = () => {
 };
 
 /**
+ * 将 HTTP URL 路径转换为文件系统路径
+ * 例如: "/test" -> "{resourceDir}/test" (开发模式)
+ */
+async function resolveFileSystemPath(httpPath: string): Promise<string> {
+  if (!isTauri()) {
+    return httpPath;
+  }
+
+  try {
+    const { appDataDir } = await import('@tauri-apps/api/path');
+    const baseDir = await appDataDir();
+    console.log('[configService] appDataDir:', baseDir);
+
+    // 空路径或当前目录
+    if (httpPath === '' || httpPath === '.') {
+      return baseDir;
+    }
+
+    // HTTP 路径以 "/" 开头，去掉开头的 "/"
+    if (httpPath.startsWith('/')) {
+      const relativePath = httpPath.slice(1);
+      return `${baseDir}${relativePath}`;
+    }
+
+    return `${baseDir}${httpPath}`;
+  } catch (err) {
+    console.error('[configService] 获取应用数据目录失败:', err);
+    return httpPath;
+  }
+}
+
+/**
  * 获取配置文件路径
  */
 function getConfigPath(basePath: string): string {
@@ -22,20 +54,29 @@ function getConfigPath(basePath: string): string {
  * 从文件加载配置
  */
 export async function loadConfig(basePath: string): Promise<MxuConfig> {
-  const configPath = getConfigPath(basePath);
-
   if (isTauri()) {
+    // 将 HTTP 路径转换为文件系统路径
+    const fsBasePath = await resolveFileSystemPath(basePath);
+    const configPath = getConfigPath(fsBasePath);
+    
+    console.log('[configService] loadConfig - basePath:', basePath);
+    console.log('[configService] loadConfig - fsBasePath:', fsBasePath);
+    console.log('[configService] loadConfig - configPath:', configPath);
+    
     const { readTextFile, exists } = await import('@tauri-apps/plugin-fs');
     
     if (await exists(configPath)) {
       try {
         const content = await readTextFile(configPath);
         const config = JSON.parse(content) as MxuConfig;
+        console.log('[configService] loadConfig - 配置加载成功');
         return config;
       } catch (err) {
-        console.warn('读取配置文件失败，使用默认配置:', err);
+        console.warn('[configService] loadConfig - 读取配置文件失败，使用默认配置:', err);
         return defaultConfig;
       }
+    } else {
+      console.log('[configService] loadConfig - 配置文件不存在，使用默认配置');
     }
   } else {
     // 浏览器环境：尝试从 public 目录加载
@@ -71,15 +112,29 @@ export async function saveConfig(basePath: string, config: MxuConfig): Promise<b
     }
   }
 
-  const configPath = getConfigPath(basePath);
+  // 将 HTTP 路径转换为文件系统路径
+  const fsBasePath = await resolveFileSystemPath(basePath);
+  const configPath = getConfigPath(fsBasePath);
+  
+  console.log('[configService] basePath:', basePath);
+  console.log('[configService] fsBasePath:', fsBasePath);
+  console.log('[configService] configPath:', configPath);
 
   try {
-    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+    const { writeTextFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
+    
+    // 确保目录存在
+    if (!await exists(fsBasePath)) {
+      console.log('[configService] 创建目录:', fsBasePath);
+      await mkdir(fsBasePath, { recursive: true });
+    }
+    
     const content = JSON.stringify(config, null, 2);
     await writeTextFile(configPath, content);
+    console.log('[configService] 配置保存成功');
     return true;
   } catch (err) {
-    console.error('保存配置文件失败:', err);
+    console.error('[configService] 保存配置文件失败:', err);
     return false;
   }
 }

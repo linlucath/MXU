@@ -25,7 +25,22 @@
         { "path": "**/*" }
       ]
     },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [
+        { "path": "**/*" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [
+        { "path": "**/*" }
+      ]
+    },
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write-recursive",
     "dialog:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "core:path:default"
   ]
 }

@@ -10,11 +10,19 @@ import {
   Loader2,
   Bug,
   RefreshCw,
+  Smartphone,
+  Monitor,
+  Gamepad2,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { setLanguage as setI18nLanguage } from '@/i18n';
 import { resolveContent, resolveIconPath, simpleMarkdownToHtml, resolveI18nText } from '@/services/contentResolver';
+import { DeviceSelector } from './DeviceSelector';
+import { ResourceSelector } from './ResourceSelector';
 import clsx from 'clsx';
+import type { ControllerItem } from '@/types/interface';
 
 // 检测是否在 Tauri 环境中
 const isTauri = () => {
@@ -49,9 +57,29 @@ export function SettingsPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [debugLog, setDebugLog] = useState<string[]>([]);
+  
+  // 控制器选择
+  const [selectedControllerIndex, setSelectedControllerIndex] = useState(0);
+  const [showControllerDropdown, setShowControllerDropdown] = useState(false);
 
   const langKey = language === 'zh-CN' ? 'zh_cn' : 'en_us';
   const translations = interfaceTranslations[langKey];
+
+  // 获取控制器类型对应的图标
+  const getControllerIcon = (ctrl: ControllerItem) => {
+    switch (ctrl.type) {
+      case 'Adb':
+        return <Smartphone className="w-4 h-4 text-green-500" />;
+      case 'Win32':
+        return <Monitor className="w-4 h-4 text-blue-500" />;
+      case 'Gamepad':
+        return <Gamepad2 className="w-4 h-4 text-purple-500" />;
+      case 'PlayCover':
+        return <Smartphone className="w-4 h-4 text-orange-500" />;
+      default:
+        return <Smartphone className="w-4 h-4 text-text-muted" />;
+    }
+  };
 
   // 解析内容（支持文件路径、URL、国际化）
   useEffect(() => {
@@ -204,6 +232,102 @@ export function SettingsPage() {
               </div>
             </div>
           </section>
+
+          {/* MaaFramework 设置 */}
+          {projectInterface && (
+            <section className="space-y-4">
+              <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                {t('controller.title')}
+              </h2>
+              
+              {/* 控制器类型选择 */}
+              {projectInterface.controller.length > 1 && (
+                <div className="bg-bg-secondary rounded-xl p-4 border border-border">
+                  <div className="flex items-center gap-2 text-sm text-text-secondary mb-3">
+                    <span>{t('controller.selectController')}</span>
+                  </div>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowControllerDropdown(!showControllerDropdown)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border bg-bg-tertiary border-border hover:border-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {getControllerIcon(projectInterface.controller[selectedControllerIndex])}
+                        <span className="text-text-primary">
+                          {resolveI18nText(
+                            projectInterface.controller[selectedControllerIndex].label,
+                            translations
+                          ) || projectInterface.controller[selectedControllerIndex].name}
+                        </span>
+                        <span className="text-xs text-text-muted px-1.5 py-0.5 bg-bg-hover rounded">
+                          {projectInterface.controller[selectedControllerIndex].type}
+                        </span>
+                      </div>
+                      <ChevronDown className={clsx(
+                        'w-4 h-4 text-text-muted transition-transform',
+                        showControllerDropdown && 'rotate-180'
+                      )} />
+                    </button>
+                    
+                    {/* 下拉菜单 */}
+                    {showControllerDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-bg-secondary border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {projectInterface.controller.map((ctrl, index) => (
+                          <button
+                            key={ctrl.name}
+                            onClick={() => {
+                              setSelectedControllerIndex(index);
+                              setShowControllerDropdown(false);
+                            }}
+                            className={clsx(
+                              'w-full flex items-center justify-between px-3 py-2 text-left transition-colors',
+                              'hover:bg-bg-hover',
+                              selectedControllerIndex === index && 'bg-accent/10'
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              {getControllerIcon(ctrl)}
+                              <div>
+                                <div className="text-sm text-text-primary">
+                                  {resolveI18nText(ctrl.label, translations) || ctrl.name}
+                                </div>
+                                <div className="text-xs text-text-muted">{ctrl.type}</div>
+                              </div>
+                            </div>
+                            {selectedControllerIndex === index && (
+                              <Check className="w-4 h-4 text-accent flex-shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* 设备选择器 */}
+              {projectInterface.controller.length > 0 && (
+                <div className="bg-bg-secondary rounded-xl p-4 border border-border">
+                  <DeviceSelector
+                    key={selectedControllerIndex}
+                    instanceId="default"
+                    controllerDef={projectInterface.controller[selectedControllerIndex]}
+                  />
+                </div>
+              )}
+
+              {/* 资源选择 */}
+              {projectInterface.resource.length > 0 && (
+                <div className="bg-bg-secondary rounded-xl p-4 border border-border">
+                  <ResourceSelector
+                    instanceId="default"
+                    resources={projectInterface.resource}
+                  />
+                </div>
+              )}
+            </section>
+          )}
 
           {/* 调试 */}
           <section className="space-y-4">
