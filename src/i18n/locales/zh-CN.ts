@@ -23,6 +23,7 @@ export default {
     about: '关于',
     renameInstance: '重命名实例',
     instanceName: '实例名称',
+    dragToReorder: '拖拽以重新排序',
   },
 
   // 设置
@@ -207,6 +208,10 @@ export default {
     newTab: '新建标签页',
     duplicateTab: '复制标签页',
     renameTab: '重命名',
+    moveLeft: '向左移动',
+    moveRight: '向右移动',
+    moveToFirst: '移到最左',
+    moveToLast: '移到最右',
     closeTab: '关闭标签页',
     closeOtherTabs: '关闭其他标签页',
     closeAllTabs: '关闭所有标签页',

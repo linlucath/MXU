@@ -23,6 +23,7 @@ export default {
     about: 'About',
     renameInstance: 'Rename Instance',
     instanceName: 'Instance Name',
+    dragToReorder: 'Drag to reorder',
   },
 
   // Settings
@@ -207,6 +208,10 @@ export default {
     newTab: 'New Tab',
     duplicateTab: 'Duplicate Tab',
     renameTab: 'Rename',
+    moveLeft: 'Move Left',
+    moveRight: 'Move Right',
+    moveToFirst: 'Move to First',
+    moveToLast: 'Move to Last',
     closeTab: 'Close Tab',
     closeOtherTabs: 'Close Other Tabs',
     closeAllTabs: 'Close All Tabs',

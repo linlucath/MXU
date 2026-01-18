@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Settings, Sun, Moon, Check, LayoutGrid, Copy, Edit3, XCircle } from 'lucide-react';
+import { Plus, X, Settings, Sun, Moon, Check, LayoutGrid, Copy, Edit3, XCircle, GripVertical, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelRightClose } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { ContextMenu, useContextMenu, type MenuItem } from './ContextMenu';
 import clsx from 'clsx';
@@ -9,6 +9,12 @@ export function TabBar() {
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    draggedIndex: number;
+    dragOverIndex: number | null;
+  }>({ isDragging: false, draggedIndex: -1, dragOverIndex: null });
+  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   
   const {
     instances,
@@ -17,6 +23,7 @@ export function TabBar() {
     removeInstance,
     setActiveInstance,
     renameInstance,
+    reorderInstances,
     duplicateInstance,
     theme,
     setTheme,
@@ -78,6 +85,8 @@ export function TabBar() {
   const handleTabContextMenu = useCallback(
     (e: React.MouseEvent, instanceId: string, instanceName: string) => {
       const instanceIndex = instances.findIndex(i => i.id === instanceId);
+      const isFirst = instanceIndex === 0;
+      const isLast = instanceIndex === instances.length - 1;
       
       const menuItems: MenuItem[] = [
         {
@@ -103,6 +112,35 @@ export function TabBar() {
         },
         { id: 'divider-1', label: '', divider: true },
         {
+          id: 'move-left',
+          label: t('contextMenu.moveLeft'),
+          icon: ChevronLeft,
+          disabled: isFirst,
+          onClick: () => reorderInstances(instanceIndex, instanceIndex - 1),
+        },
+        {
+          id: 'move-right',
+          label: t('contextMenu.moveRight'),
+          icon: ChevronRight,
+          disabled: isLast,
+          onClick: () => reorderInstances(instanceIndex, instanceIndex + 1),
+        },
+        {
+          id: 'move-first',
+          label: t('contextMenu.moveToFirst'),
+          icon: ChevronsLeft,
+          disabled: isFirst,
+          onClick: () => reorderInstances(instanceIndex, 0),
+        },
+        {
+          id: 'move-last',
+          label: t('contextMenu.moveToLast'),
+          icon: ChevronsRight,
+          disabled: isLast,
+          onClick: () => reorderInstances(instanceIndex, instances.length - 1),
+        },
+        { id: 'divider-2', label: '', divider: true },
+        {
           id: 'close',
           label: t('contextMenu.closeTab'),
           icon: X,
@@ -125,6 +163,7 @@ export function TabBar() {
         {
           id: 'close-right',
           label: t('contextMenu.closeTabsToRight'),
+          icon: PanelRightClose,
           disabled: instanceIndex >= instances.length - 1,
           onClick: () => {
             instances.slice(instanceIndex + 1).forEach(inst => {
@@ -136,26 +175,93 @@ export function TabBar() {
 
       showMenu(e, menuItems);
     },
-    [instances, t, createInstance, duplicateInstance, removeInstance, showMenu]
+    [instances, t, createInstance, duplicateInstance, removeInstance, reorderInstances, showMenu]
   );
+
+  // 基于鼠标事件的拖拽实现（更可靠，兼容 Tauri）
+  const handleMouseDown = useCallback((e: React.MouseEvent, index: number) => {
+    // 只响应拖拽手柄的点击
+    if (!(e.target as HTMLElement).closest('.drag-handle')) return;
+    
+    e.preventDefault();
+    setDragState({ isDragging: true, draggedIndex: index, dragOverIndex: null });
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragState.isDragging) return;
+
+    // 找出鼠标当前位置对应的标签索引
+    let newDragOverIndex: number | null = null;
+    tabRefs.current.forEach((el, id) => {
+      const rect = el.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right) {
+        const idx = instances.findIndex(inst => inst.id === id);
+        if (idx !== -1 && idx !== dragState.draggedIndex) {
+          newDragOverIndex = idx;
+        }
+      }
+    });
+
+    if (newDragOverIndex !== dragState.dragOverIndex) {
+      setDragState(prev => ({ ...prev, dragOverIndex: newDragOverIndex }));
+    }
+  }, [dragState.isDragging, dragState.draggedIndex, dragState.dragOverIndex, instances]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!dragState.isDragging) return;
+
+    if (dragState.dragOverIndex !== null && dragState.draggedIndex !== dragState.dragOverIndex) {
+      reorderInstances(dragState.draggedIndex, dragState.dragOverIndex);
+    }
+    setDragState({ isDragging: false, draggedIndex: -1, dragOverIndex: null });
+  }, [dragState, reorderInstances]);
+
+  // 全局鼠标事件监听
+  useEffect(() => {
+    if (dragState.isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [dragState.isDragging, handleMouseMove, handleMouseUp]);
 
   return (
     <div className="flex items-center h-10 bg-bg-secondary border-b border-border select-none">
       {/* 标签页区域 */}
       <div className="flex-1 flex items-center h-full overflow-x-auto">
-        {instances.map((instance) => (
+        {instances.map((instance, index) => (
           <div
             key={instance.id}
+            ref={(el) => {
+              if (el) tabRefs.current.set(instance.id, el);
+              else tabRefs.current.delete(instance.id);
+            }}
+            onMouseDown={(e) => handleMouseDown(e, index)}
             onClick={() => setActiveInstance(instance.id)}
             onDoubleClick={(e) => handleDoubleClick(e, instance.id, instance.name)}
             onContextMenu={(e) => handleTabContextMenu(e, instance.id, instance.name)}
             className={clsx(
-              'group flex items-center gap-2 h-full px-4 cursor-pointer border-r border-border transition-colors min-w-[120px] max-w-[200px]',
+              'group flex items-center gap-1 h-full px-2 cursor-pointer border-r border-border transition-all min-w-[120px] max-w-[200px]',
               instance.id === activeInstanceId
                 ? 'bg-bg-primary text-accent border-b-2 border-b-accent'
-                : 'bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-b-2 border-b-transparent'
+                : 'bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-b-2 border-b-transparent',
+              dragState.isDragging && dragState.draggedIndex === index && 'opacity-50 bg-accent/10',
+              dragState.isDragging && dragState.dragOverIndex === index && 'border-l-2 border-l-accent'
             )}
           >
+            {/* 拖拽手柄 - 仅多标签时显示 */}
+            {instances.length > 1 && editingId !== instance.id && (
+              <div 
+                className="drag-handle p-0.5 cursor-grab opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                title={t('titleBar.dragToReorder')}
+              >
+                <GripVertical className="w-3 h-3" />
+              </div>
+            )}
+            
             {editingId === instance.id ? (
               <div className="flex-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <input

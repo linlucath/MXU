@@ -37,6 +37,7 @@ interface AppState {
   setActiveInstance: (id: string) => void;
   updateInstance: (id: string, updates: Partial<Instance>) => void;
   renameInstance: (id: string, newName: string) => void;
+  reorderInstances: (oldIndex: number, newIndex: number) => void;
   
   // 获取活动实例
   getActiveInstance: () => Instance | null;
@@ -248,6 +249,13 @@ export const useAppStore = create<AppState>()(
           i.id === id ? { ...i, name: newName } : i
         ),
       })),
+      
+      reorderInstances: (oldIndex, newIndex) => set((state) => {
+        const instances = [...state.instances];
+        const [removed] = instances.splice(oldIndex, 1);
+        instances.splice(newIndex, 0, removed);
+        return { instances };
+      }),
       
       getActiveInstance: () => {
         const state = get();
