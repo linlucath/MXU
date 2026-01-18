@@ -10,6 +10,7 @@ import {
   SettingsPage,
   WelcomeDialog,
   ConnectionPanel,
+  DashboardView,
 } from '@/components';
 import { autoLoadInterface, loadConfig, loadConfigFromStorage, resolveI18nText } from '@/services';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
@@ -62,6 +63,7 @@ function App() {
     interfaceTranslations,
     language,
     sidePanelExpanded,
+    dashboardView,
   } = useAppStore();
 
   const initialized = useRef(false);
@@ -234,40 +236,45 @@ function App() {
       {/* 顶部标签栏 */}
       <TabBar />
 
-      {/* 主内容区 */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 左侧任务列表区 */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-border">
-          {/* 任务列表 */}
-          <TaskList />
+      {/* 中控台视图 */}
+      {dashboardView ? (
+        <DashboardView />
+      ) : (
+        /* 主内容区 */
+        <div className="flex-1 flex overflow-hidden">
+          {/* 左侧任务列表区 */}
+          <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+            {/* 任务列表 */}
+            <TaskList />
 
-          {/* 添加任务面板 */}
-          {showAddPanel && <AddTaskPanel />}
+            {/* 添加任务面板 */}
+            {showAddPanel && <AddTaskPanel />}
 
-          {/* 底部工具栏 */}
-          <Toolbar
-            showAddPanel={showAddPanel}
-            onToggleAddPanel={() => setShowAddPanel(!showAddPanel)}
-          />
+            {/* 底部工具栏 */}
+            <Toolbar
+              showAddPanel={showAddPanel}
+              onToggleAddPanel={() => setShowAddPanel(!showAddPanel)}
+            />
+          </div>
+
+          {/* 右侧信息面板 */}
+          <div className="w-80 flex flex-col gap-3 p-3 bg-bg-primary overflow-y-auto">
+            {/* 连接设置和实时截图（可折叠） */}
+            {sidePanelExpanded && (
+              <>
+                {/* 连接设置（设备/资源选择） */}
+                <ConnectionPanel />
+
+                {/* 实时截图 */}
+                <ScreenshotPanel />
+              </>
+            )}
+
+            {/* 运行日志 */}
+            <LogsPanel />
+          </div>
         </div>
-
-        {/* 右侧信息面板 */}
-        <div className="w-80 flex flex-col gap-3 p-3 bg-bg-primary overflow-y-auto">
-          {/* 连接设置和实时截图（可折叠） */}
-          {sidePanelExpanded && (
-            <>
-              {/* 连接设置（设备/资源选择） */}
-              <ConnectionPanel />
-
-              {/* 实时截图 */}
-              <ScreenshotPanel />
-            </>
-          )}
-
-          {/* 运行日志 */}
-          <LogsPanel />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

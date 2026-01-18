@@ -88,6 +88,13 @@ export function ScreenshotPanel() {
     setIsFullscreen(!isFullscreen);
   };
 
+  // 组件卸载时停止截图流
+  useEffect(() => {
+    return () => {
+      streamingRef.current = false;
+    };
+  }, []);
+
   // ESC 键退出全屏
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -322,33 +329,47 @@ export function ScreenshotPanel() {
       {/* 全屏模态框 */}
       {isFullscreen && screenshotUrl && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-white/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-8"
           onClick={toggleFullscreen}
         >
-          {/* 关闭按钮 */}
-          <button
-            onClick={toggleFullscreen}
-            className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-            title={t('screenshot.exitFullscreen')}
-          >
-            <X className="w-6 h-6" />
-          </button>
-          
-          {/* 全屏图片 */}
-          <img
-            src={screenshotUrl}
-            alt="Screenshot"
-            className="max-w-full max-h-full object-contain"
+          {/* 卡片容器 */}
+          <div 
+            className="relative bg-bg-secondary rounded-xl border border-border shadow-2xl max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
-          />
-          
-          {/* 流模式指示器 */}
-          {isStreaming && (
-            <div className="absolute top-4 left-4 flex items-center gap-1 px-2 py-1 bg-green-500/80 rounded text-white text-sm">
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              LIVE
+          >
+            {/* 卡片标题栏 */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-tertiary/50">
+              <div className="flex items-center gap-2">
+                <Monitor className="w-4 h-4 text-text-secondary" />
+                <span className="text-sm font-medium text-text-primary">
+                  {t('screenshot.title')}
+                </span>
+                {/* 流模式指示器 */}
+                {isStreaming && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/90 rounded text-white text-xs ml-2">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    LIVE
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={toggleFullscreen}
+                className="p-1.5 rounded-md hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors"
+                title={t('screenshot.exitFullscreen')}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          )}
+            
+            {/* 图片内容区 */}
+            <div className="p-4 bg-bg-primary flex items-center justify-center overflow-auto">
+              <img
+                src={screenshotUrl}
+                alt="Screenshot"
+                className="max-w-full max-h-[calc(90vh-80px)] object-contain rounded-md"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -11,3 +11,4 @@ export { WelcomeDialog } from './WelcomeDialog';
 export { DeviceSelector } from './DeviceSelector';
 export { ResourceSelector } from './ResourceSelector';
 export { ConnectionPanel } from './ConnectionPanel';
+export { DashboardView } from './DashboardView';

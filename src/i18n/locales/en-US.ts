@@ -179,6 +179,18 @@ export default {
     title: 'Connection Settings',
   },
 
+  // Dashboard
+  dashboard: {
+    title: 'Dashboard',
+    toggle: 'Dashboard View',
+    exit: 'Exit Dashboard',
+    instances: 'instances',
+    noInstances: 'No instances',
+    running: 'Running',
+    succeeded: 'Succeeded',
+    failed: 'Failed',
+  },
+
   // Error messages
   errors: {
     loadInterfaceFailed: 'Failed to load interface.json',

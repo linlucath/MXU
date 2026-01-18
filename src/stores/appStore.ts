@@ -101,6 +101,11 @@ interface AppState {
   sidePanelExpanded: boolean;
   setSidePanelExpanded: (expanded: boolean) => void;
   toggleSidePanelExpanded: () => void;
+  
+  // 中控台视图模式（同时显示所有实例的截图和日志）
+  dashboardView: boolean;
+  setDashboardView: (enabled: boolean) => void;
+  toggleDashboardView: () => void;
 }
 
 // 生成唯一 ID
@@ -529,6 +534,11 @@ export const useAppStore = create<AppState>()(
       sidePanelExpanded: true,
       setSidePanelExpanded: (expanded) => set({ sidePanelExpanded: expanded }),
       toggleSidePanelExpanded: () => set((state) => ({ sidePanelExpanded: !state.sidePanelExpanded })),
+      
+      // 中控台视图模式
+      dashboardView: false,
+      setDashboardView: (enabled) => set({ dashboardView: enabled }),
+      toggleDashboardView: () => set((state) => ({ dashboardView: !state.dashboardView })),
     })
   )
 );

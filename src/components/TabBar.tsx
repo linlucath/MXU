@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Settings, Sun, Moon, Check } from 'lucide-react';
+import { Plus, X, Settings, Sun, Moon, Check, LayoutGrid } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import clsx from 'clsx';
 
@@ -22,6 +22,8 @@ export function TabBar() {
     projectInterface,
     resolveI18nText,
     language,
+    dashboardView,
+    toggleDashboardView,
   } = useAppStore();
 
   const handleNewTab = () => {
@@ -162,6 +164,18 @@ export function TabBar() {
 
       {/* 工具按钮 */}
       <div className="flex items-center gap-1 px-2">
+        <button
+          onClick={toggleDashboardView}
+          className={clsx(
+            'p-2 rounded-md transition-colors',
+            dashboardView
+              ? 'bg-accent/10 text-accent'
+              : 'hover:bg-bg-hover text-text-secondary'
+          )}
+          title={t('dashboard.toggle')}
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </button>
         <button
           onClick={toggleTheme}
           className="p-2 rounded-md hover:bg-bg-hover transition-colors"
