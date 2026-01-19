@@ -63,11 +63,21 @@ function PolicyCard({
   };
 
   const handleSelectAllWeekdays = () => {
-    onUpdate({ weekdays: [0, 1, 2, 3, 4, 5, 6] });
+    // 已全选时取消全选，否则全选
+    if (policy.weekdays.length === 7) {
+      onUpdate({ weekdays: [] });
+    } else {
+      onUpdate({ weekdays: [0, 1, 2, 3, 4, 5, 6] });
+    }
   };
 
   const handleSelectAllHours = () => {
-    onUpdate({ hours: HOURS });
+    // 已全选时取消全选，否则全选
+    if (policy.hours.length === 24) {
+      onUpdate({ hours: [] });
+    } else {
+      onUpdate({ hours: HOURS });
+    }
   };
 
   // 格式化显示已选周几
