@@ -90,6 +90,7 @@ export interface AppSettings {
   screenshotPanelExpanded?: boolean; // 实时截图卡片是否展开
   screenshotFrameRate?: ScreenshotFrameRate; // 实时截图帧率
   welcomeShownHash?: string;    // 已显示过的 welcome 内容 hash，用于判断内容变化时重新弹窗
+  devMode?: boolean;            // 开发模式，启用后允许 F5 刷新 UI
 }
 
 // MXU 配置文件完整结构

@@ -242,13 +242,14 @@ export default {
     environment: 'Environment',
     envTauri: 'Tauri Desktop',
     envBrowser: 'Browser',
-    refreshUI: 'Refresh UI',
     resetWindowSize: 'Reset Window Size',
     openConfigDir: 'Open Config Dir',
     openLogDir: 'Open Log Dir',
     clearCache: 'Clear Cache',
     cacheCleared: 'Cache cleared',
     cacheStats: 'Cache entries: {{count}}',
+    devMode: 'Developer Mode',
+    devModeHint: 'Allow pressing F5 to refresh UI when enabled',
   },
 
   // Welcome dialog

@@ -501,20 +501,22 @@ function App() {
   }, []);
 
   // 屏蔽浏览器默认快捷键
+  const devMode = useAppStore((state) => state.devMode);
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
-      // F5 - 刷新（仅生产环境屏蔽）
-      if (e.key === 'F5' && import.meta.env.PROD) {
+      // F5 - 刷新（生产环境下，开发模式关闭时屏蔽）
+      if (e.key === 'F5' && import.meta.env.PROD && !devMode) {
         e.preventDefault();
         return;
       }
 
       // Ctrl/Cmd 组合键
       if (isCtrlOrMeta) {
-        // Ctrl+R 刷新（仅生产环境屏蔽）
-        if (e.key.toLowerCase() === 'r' && import.meta.env.PROD) {
+        // Ctrl+R 刷新（生产环境下，开发模式关闭时屏蔽）
+        if (e.key.toLowerCase() === 'r' && import.meta.env.PROD && !devMode) {
           e.preventDefault();
           return;
         }
@@ -561,7 +563,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [devMode]);
 
   // 设置页面
   if (currentPage === 'settings') {

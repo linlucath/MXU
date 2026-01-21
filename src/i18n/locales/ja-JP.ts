@@ -242,13 +242,14 @@ export default {
     environment: '実行環境',
     envTauri: 'Tauri デスクトップ',
     envBrowser: 'ブラウザ',
-    refreshUI: 'UI を更新',
     resetWindowSize: 'ウィンドウサイズをリセット',
     openConfigDir: '設定フォルダを開く',
     openLogDir: 'ログフォルダを開く',
     clearCache: 'キャッシュをクリア',
     cacheCleared: 'キャッシュをクリアしました',
     cacheStats: 'キャッシュ項目: {{count}} 件',
+    devMode: '開発者モード',
+    devModeHint: '有効にすると F5 キーで UI をリフレッシュできます',
   },
 
   // ウェルカムダイアログ

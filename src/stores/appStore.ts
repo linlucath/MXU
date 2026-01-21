@@ -181,6 +181,10 @@ interface AppState {
   welcomeShownHash: string;
   setWelcomeShownHash: (hash: string) => void;
   
+  // 开发模式
+  devMode: boolean;
+  setDevMode: (devMode: boolean) => void;
+  
   // 更新检查状态
   updateInfo: UpdateInfo | null;
   updateCheckLoading: boolean;
@@ -904,6 +908,7 @@ export const useAppStore = create<AppState>()(
           screenshotPanelExpanded: config.settings.screenshotPanelExpanded ?? true,
           screenshotFrameRate: config.settings.screenshotFrameRate ?? defaultScreenshotFrameRate,
           welcomeShownHash: config.settings.welcomeShownHash ?? '',
+          devMode: config.settings.devMode ?? false,
           recentlyClosed: config.recentlyClosed || [],
         });
         
@@ -1082,6 +1087,10 @@ export const useAppStore = create<AppState>()(
       // Welcome 弹窗显示记录
       welcomeShownHash: '',
       setWelcomeShownHash: (hash) => set({ welcomeShownHash: hash }),
+      
+      // 开发模式
+      devMode: false,
+      setDevMode: (devMode) => set({ devMode }),
       
       // 更新检查状态
       updateInfo: null,
@@ -1395,6 +1404,7 @@ function generateConfig(): MxuConfig {
       screenshotPanelExpanded: state.screenshotPanelExpanded,
       screenshotFrameRate: state.screenshotFrameRate,
       welcomeShownHash: state.welcomeShownHash,
+      devMode: state.devMode,
     },
     recentlyClosed: state.recentlyClosed,
   };
@@ -1430,6 +1440,7 @@ useAppStore.subscribe(
     screenshotPanelExpanded: state.screenshotPanelExpanded,
     screenshotFrameRate: state.screenshotFrameRate,
     welcomeShownHash: state.welcomeShownHash,
+    devMode: state.devMode,
     recentlyClosed: state.recentlyClosed,
   }),
   () => {

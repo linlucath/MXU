@@ -70,6 +70,8 @@ export function SettingsPage() {
     setShowUpdateDialog,
     showOptionPreview,
     setShowOptionPreview,
+    devMode,
+    setDevMode,
     downloadStatus,
     downloadProgress,
     setDownloadStatus,
@@ -295,12 +297,6 @@ export function SettingsPage() {
   const handleLanguageChange = (lang: 'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR') => {
     setLanguage(lang);
     setI18nLanguage(lang);
-  };
-
-  // 调试：刷新 UI
-  const handleRefreshUI = () => {
-    addDebugLog('刷新 UI...');
-    window.location.reload();
   };
 
   // 检查更新
@@ -930,13 +926,6 @@ export function SettingsPage() {
               {/* 操作按钮 */}
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={handleRefreshUI}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-bg-tertiary hover:bg-bg-hover rounded-lg transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  {t('debug.refreshUI')}
-                </button>
-                <button
                   onClick={handleResetWindowSize}
                   className="flex items-center gap-2 px-3 py-2 text-sm bg-bg-tertiary hover:bg-bg-hover rounded-lg transition-colors"
                 >
@@ -967,6 +956,31 @@ export function SettingsPage() {
                   {cacheEntryCount !== null && cacheEntryCount > 0 && (
                     <span className="text-xs text-text-muted">({cacheEntryCount})</span>
                   )}
+                </button>
+              </div>
+
+              {/* 开发模式 */}
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                <div className="flex items-center gap-3">
+                  <RefreshCw className="w-5 h-5 text-accent" />
+                  <div>
+                    <span className="font-medium text-text-primary">{t('debug.devMode')}</span>
+                    <p className="text-xs text-text-muted mt-0.5">{t('debug.devModeHint')}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDevMode(!devMode)}
+                  className={clsx(
+                    'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
+                    devMode ? 'bg-accent' : 'bg-bg-active'
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      'absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+                      devMode ? 'translate-x-5' : 'translate-x-0'
+                    )}
+                  />
                 </button>
               </div>
             </div>

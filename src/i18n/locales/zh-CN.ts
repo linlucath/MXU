@@ -242,13 +242,14 @@ export default {
     environment: '运行环境',
     envTauri: 'Tauri 桌面端',
     envBrowser: '浏览器',
-    refreshUI: '刷新 UI',
     resetWindowSize: '重置窗口尺寸',
     openConfigDir: '打开配置目录',
     openLogDir: '打开日志目录',
     clearCache: '清空缓存',
     cacheCleared: '缓存已清空',
     cacheStats: '缓存条目: {{count}} 条',
+    devMode: '开发模式',
+    devModeHint: '启用后允许按 F5 刷新 UI',
   },
 
   // 欢迎弹窗

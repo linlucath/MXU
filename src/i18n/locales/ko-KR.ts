@@ -242,13 +242,14 @@ export default {
     environment: '실행 환경',
     envTauri: 'Tauri 데스크톱',
     envBrowser: '브라우저',
-    refreshUI: 'UI 새로고침',
     resetWindowSize: '창 크기 초기화',
     openConfigDir: '설정 폴더 열기',
     openLogDir: '로그 폴더 열기',
     clearCache: '캐시 지우기',
     cacheCleared: '캐시가 지워졌습니다',
     cacheStats: '캐시 항목: {{count}}개',
+    devMode: '개발자 모드',
+    devModeHint: '활성화하면 F5 키로 UI를 새로고침할 수 있습니다',
   },
 
   // 환영 대화상자
