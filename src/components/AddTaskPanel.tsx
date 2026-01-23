@@ -181,9 +181,9 @@ export function AddTaskPanel() {
   }, [instance?.selectedTasks]);
 
   // 获取当前实例选中的控制器和资源
-  // 未选择控制器时，使用第一个控制器作为默认值判断兼容性
+  // 未选择时，使用第一个控制器/资源作为默认值判断兼容性
   const selectedControllerName = instance?.controllerName || projectInterface?.controller[0]?.name;
-  const selectedResourceName = instance?.resourceName;
+  const selectedResourceName = instance?.resourceName || projectInterface?.resource[0]?.name;
 
   const filteredTasks = useMemo(() => {
     if (!projectInterface) return [];

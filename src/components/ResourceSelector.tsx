@@ -28,22 +28,26 @@ export function ResourceSelector({
   isRunning = false,
 }: ResourceSelectorProps) {
   const { t } = useTranslation();
-  const { basePath, language, interfaceTranslations, registerResIdName } = useAppStore();
+  const { basePath, language, interfaceTranslations, registerResIdName, projectInterface } = useAppStore();
+
+  // 未选择控制器时，使用第一个控制器作为默认值判断兼容性
+  const effectiveControllerName = selectedControllerName || projectInterface?.controller[0]?.name;
 
   // 检查资源是否与当前控制器兼容
   const getResourceCompatibility = useCallback(
     (resource: ResourceItem) => {
       const isControllerIncompatible =
-        resource.controller &&
+        !!resource.controller &&
         resource.controller.length > 0 &&
-        (!selectedControllerName || !resource.controller.includes(selectedControllerName));
+        !!effectiveControllerName &&
+        !resource.controller.includes(effectiveControllerName);
 
       return {
         isIncompatible: isControllerIncompatible,
         reason: isControllerIncompatible ? t('resource.incompatibleController') : '',
       };
     },
-    [selectedControllerName, t],
+    [effectiveControllerName, t],
   );
 
   const [isLoading, setIsLoading] = useState(false);

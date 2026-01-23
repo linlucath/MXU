@@ -298,9 +298,10 @@ export function ConnectionPanel() {
   const getResourceCompatibility = useCallback(
     (resource: ResourceItem) => {
       const isControllerIncompatible =
-        resource.controller &&
+        !!resource.controller &&
         resource.controller.length > 0 &&
-        (!currentControllerName || !resource.controller.includes(currentControllerName));
+        !!currentControllerName &&
+        !resource.controller.includes(currentControllerName);
 
       return {
         isIncompatible: isControllerIncompatible,
