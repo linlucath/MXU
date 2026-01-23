@@ -27,7 +27,7 @@ import {
 const MAX_RECENTLY_CLOSED = 30;
 import type { ConnectionStatus, TaskStatus, AdbDevice, Win32Window } from '@/types/maa';
 import { saveConfig } from '@/services/configService';
-import { getInterfaceLangKey } from '@/i18n';
+import i18n, { getInterfaceLangKey } from '@/i18n';
 import { applyTheme, type AccentColor } from '@/themes';
 import { loggers } from '@/utils/logger';
 
@@ -806,16 +806,17 @@ export const useAppStore = create<AppState>()(
       const originalTask = instance.selectedTasks[taskIndex];
 
       // 计算新任务的显示名称
+      const copySuffix = i18n.t('common.copySuffix');
       let newCustomName: string;
       if (originalTask.customName) {
-        newCustomName = `${originalTask.customName}（副本）`;
+        newCustomName = `${originalTask.customName}${copySuffix}`;
       } else {
         // 获取任务的原始 label
         const taskDef = state.projectInterface?.task.find((t) => t.name === originalTask.taskName);
         const langKey = getInterfaceLangKey(state.language);
         const originalLabel =
           state.resolveI18nText(taskDef?.label, langKey) || taskDef?.name || originalTask.taskName;
-        newCustomName = `${originalLabel}（副本）`;
+        newCustomName = `${originalLabel}${copySuffix}`;
       }
 
       const newTask: SelectedTask = {
@@ -913,7 +914,7 @@ export const useAppStore = create<AppState>()(
       const newInstance: Instance = {
         ...sourceInstance,
         id: newId,
-        name: `${sourceInstance.name} (副本)`,
+        name: `${sourceInstance.name}${i18n.t('common.copySuffix')}`,
         selectedTasks: sourceInstance.selectedTasks.map((t) => ({
           ...t,
           id: generateId(),

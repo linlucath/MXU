@@ -14,6 +14,7 @@ export default {
     warning: '경고',
     info: '알림',
     resizeOrCollapse: '드래그하여 너비 조정, 오른쪽 끝까지 드래그하면 접기',
+    copySuffix: ' (복사)',
   },
 
   // 타이틀바

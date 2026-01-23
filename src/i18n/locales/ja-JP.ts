@@ -14,6 +14,7 @@ export default {
     warning: '警告',
     info: 'お知らせ',
     resizeOrCollapse: 'ドラッグして幅を調整、右端までドラッグで折りたたみ',
+    copySuffix: '（コピー）',
   },
 
   // タイトルバー

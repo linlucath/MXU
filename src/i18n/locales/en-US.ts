@@ -14,6 +14,7 @@ export default {
     warning: 'Warning',
     info: 'Info',
     resizeOrCollapse: 'Drag to resize, drag to the right edge to collapse',
+    copySuffix: ' (Copy)',
   },
 
   // Title bar
