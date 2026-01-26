@@ -10,7 +10,7 @@ export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'silent';
 
 // 根据环境设置默认日志级别
 const isDev = import.meta.env.DEV;
-const defaultLevel: LogLevel = isDev ? 'debug' : 'warn';
+const defaultLevel: LogLevel = isDev ? 'trace' : 'debug';
 
 // 检测是否在 Tauri 环境中
 const isTauri = () => typeof window !== 'undefined' && '__TAURI__' in window;
