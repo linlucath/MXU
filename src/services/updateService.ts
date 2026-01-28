@@ -336,29 +336,36 @@ export function isDebugVersion(version: string | undefined): boolean {
 }
 
 /**
- * 比较版本号
+ * 比较版本号（使用 semver 库处理预发布版本）
  * @returns 正数表示 v1 > v2，负数表示 v1 < v2，0 表示相等
  */
 function compareVersions(v1: string, v2: string): number {
   // 移除 v 前缀
   const normalize = (v: string) => v.replace(/^v/i, '');
 
-  const parts1 = normalize(v1)
-    .split('.')
-    .map((p) => parseInt(p, 10) || 0);
-  const parts2 = normalize(v2)
-    .split('.')
-    .map((p) => parseInt(p, 10) || 0);
+  const normalized1 = normalize(v1);
+  const normalized2 = normalize(v2);
 
-  const maxLen = Math.max(parts1.length, parts2.length);
+  // 优先尝试直接解析为有效的 semver 版本（保留预发布标签如 -beta.1）
+  const valid1 = semver.valid(normalized1);
+  const valid2 = semver.valid(normalized2);
 
-  for (let i = 0; i < maxLen; i++) {
-    const p1 = parts1[i] || 0;
-    const p2 = parts2[i] || 0;
-    if (p1 !== p2) return p1 - p2;
+  if (valid1 && valid2) {
+    // 两个都是有效的 semver 版本，直接比较
+    // semver 规范：1.6.0 > 1.6.0-beta.1（正式版大于预发布版）
+    return semver.compare(valid1, valid2);
   }
 
-  return 0;
+  // 如果有一个不是有效的 semver，尝试用 coerce 解析（会丢失预发布标签）
+  const coerced1 = valid1 || semver.coerce(normalized1)?.version;
+  const coerced2 = valid2 || semver.coerce(normalized2)?.version;
+
+  if (coerced1 && coerced2) {
+    return semver.compare(coerced1, coerced2);
+  }
+
+  // 如果 semver 完全无法解析，回退到字符串比较
+  return normalized1.localeCompare(normalized2);
 }
 
 /**
