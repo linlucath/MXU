@@ -186,53 +186,6 @@ pub fn is_webview2_disabled() -> Option<String> {
         }
     }
 
-    // 检查 Edge 是否被完全禁用（这也会影响 WebView2）
-    let edge_disable_paths = [
-        (HKEY_CURRENT_USER, r"Software\Policies\Microsoft\Edge"),
-        (HKEY_LOCAL_MACHINE, r"Software\Policies\Microsoft\Edge"),
-    ];
-
-    for (root, path) in &edge_disable_paths {
-        let path_wide = to_wide(path);
-        let mut hkey: HKEY = HKEY::default();
-        let result = unsafe {
-            RegOpenKeyExW(
-                *root,
-                PCWSTR::from_raw(path_wide.as_ptr()),
-                0,
-                KEY_READ,
-                &mut hkey,
-            )
-        };
-
-        if result.is_ok() {
-            // 检查 Enabled 值（0 表示禁用）
-            let enabled_name = to_wide("Enabled");
-            let mut dword_value: u32 = 1;
-            let mut dword_size = std::mem::size_of::<u32>() as u32;
-
-            let value_result = unsafe {
-                RegGetValueW(
-                    hkey,
-                    PCWSTR::null(),
-                    PCWSTR::from_raw(enabled_name.as_ptr()),
-                    RRF_RT_REG_DWORD,
-                    None,
-                    Some(&mut dword_value as *mut u32 as *mut _),
-                    Some(&mut dword_size),
-                )
-            };
-
-            unsafe {
-                let _ = RegCloseKey(hkey);
-            }
-
-            if value_result.is_ok() && dword_value == 0 {
-                return Some("Microsoft Edge 已被组策略禁用".to_string());
-            }
-        }
-    }
-
     // 检查 Windows 功能中 WebView2 是否被禁用
     // 通过检查 Windows 可选功能状态
     let feature_paths = [(
@@ -284,14 +237,8 @@ pub fn is_webview2_disabled() -> Option<String> {
     // 检查 IFEO (Image File Execution Options) 禁用
     // Edge Blocker v2.0 等工具使用这种方式禁用 Edge/WebView2
     // 通过设置 Debugger 值来阻止进程启动
-    let ifeo_targets = [
-        ("msedgewebview2.exe", "WebView2 进程 (msedgewebview2.exe)"),
-        ("msedge.exe", "Edge 浏览器进程 (msedge.exe)"),
-        (
-            "MicrosoftEdgeUpdate.exe",
-            "Edge 更新服务 (MicrosoftEdgeUpdate.exe)",
-        ),
-    ];
+    // 注意：我们只检查 WebView2 进程，不检查 Edge 浏览器进程
+    let ifeo_targets = [("msedgewebview2.exe", "WebView2 进程 (msedgewebview2.exe)")];
 
     for (exe_name, display_name) in &ifeo_targets {
         let ifeo_path = format!(

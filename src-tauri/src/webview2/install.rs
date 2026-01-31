@@ -20,23 +20,21 @@ fn show_webview2_disabled_dialog(reason: &str) {
     let message = format!(
         "检测到 WebView2 已被禁用：\r\n{}\r\n\r\n\
          【什么是 WebView2？】\r\n\
-         WebView2 是微软 Edge 浏览器的核心组件，本程序依赖它来\r\n\
-         显示界面。如果 Edge 或 WebView2 被禁用，程序将无法正常运行。\r\n\r\n\
+         WebView2 是微软提供的网页渲染组件，本程序依赖它来\r\n\
+         显示界面。如果 WebView2 被禁用，程序将无法正常运行。\r\n\r\n\
          【如何解决？】\r\n\
          方法一：如果使用了 Edge Blocker 等工具\r\n\
          - 打开 Edge Blocker，点击\"Unblock\"解除禁用\r\n\
          - 或删除注册表中的 IFEO 拦截项\r\n\r\n\
-         方法二：启用 Microsoft Edge 浏览器\r\n\
-         - 如果您之前禁用过 Edge 浏览器，请重新启用它\r\n\r\n\
-         方法三：修改组策略（需要管理员权限）\r\n\
+         方法二：修改组策略（需要管理员权限）\r\n\
          1. 按 Win + R，输入 gpedit.msc\r\n\
          2. 导航到：计算机配置 > 管理模板 > Microsoft Edge WebView2\r\n\
          3. 将相关策略设置为\"未配置\"或\"已启用\"\r\n\r\n\
-         方法四：加入我们的 QQ 群，获取帮助和支持\r\n\
+         方法三：加入我们的 QQ 群，获取帮助和支持\r\n\
          - 群号可在我们的官网或文档底部找到\r\n\r\n",
         reason
     );
-    CustomDialog::show_error("Edge WebView2 组件已被禁用", &message);
+    CustomDialog::show_error("WebView2 组件已被禁用", &message);
 }
 
 fn show_install_failed_dialog(error: &str) {
