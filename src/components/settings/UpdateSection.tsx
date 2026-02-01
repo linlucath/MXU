@@ -220,6 +220,7 @@ export function UpdateSection() {
             userAgent: 'MXU',
             githubUrl: projectInterface!.github,
             basePath,
+            projectName: projectInterface!.name,
           });
 
           if (result) {
@@ -315,6 +316,7 @@ export function UpdateSection() {
         userAgent: 'MXU',
         githubUrl: projectInterface.github,
         basePath,
+        projectName: projectInterface.name,
       });
 
       if (result) {

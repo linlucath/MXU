@@ -451,6 +451,106 @@ async function getGitHubReleaseByVersion(
 }
 
 /**
+ * 获取直接下载链接的文件扩展名列表
+ * Windows 只尝试 .zip，Linux/macOS 尝试多种格式
+ */
+function getDownloadExtensions(): string[] {
+  const os = getOS();
+  if (os === 'windows') {
+    return ['.zip'];
+  }
+  else if (os === 'linux') {
+    return ['.zip', '.tar.gz', '.tgz', '.AppImage'];
+  }
+  else if (os === 'darwin') {
+    return ['.zip', '.tar.gz', '.tgz', '.dmg'];
+  } 
+  else {
+    return ['.zip'];
+  }
+}
+
+/**
+ * 获取 OS 名称用于直接下载链接（与 release 文件名匹配的格式）
+ */
+function getOSForDownload(): string {
+  const os = getOS();
+  if (os === 'windows') return 'win';
+  if (os === 'darwin') return 'macos';
+  return os; // linux
+}
+
+/**
+ * 获取架构名称用于直接下载链接（与 release 文件名匹配的格式）
+ */
+function getArchForDownload(): string {
+  const arch = getArch();
+  if (arch === 'amd64') return 'x86_64';
+  if (arch === 'arm64') return 'aarch64';
+  return arch;
+}
+
+/**
+ * 构建直接下载链接
+ * 格式: https://github.com/{owner}/{repo}/releases/download/v{version}/{项目名}-{os}-{arch}-v{version}.{ext}
+ */
+function buildDirectDownloadUrl(
+  owner: string,
+  repo: string,
+  projectName: string,
+  version: string,
+  extension: string,
+): string {
+  const os = getOSForDownload();
+  const arch = getArchForDownload();
+  // 确保版本号有 v 前缀
+  const versionTag = version.startsWith('v') ? version : `v${version}`;
+  const filename = `${projectName}-${os}-${arch}-${versionTag}${extension}`;
+  return `https://github.com/${owner}/${repo}/releases/download/${versionTag}/${filename}`;
+}
+
+/**
+ * 尝试直接下载链接（HEAD 请求检查是否存在）
+ * 依次尝试多种文件扩展名，返回第一个存在的链接
+ */
+async function tryDirectDownloadUrls(
+  owner: string,
+  repo: string,
+  projectName: string,
+  version: string,
+): Promise<{ url: string; filename: string } | null> {
+  const extensions = getDownloadExtensions();
+
+  for (const ext of extensions) {
+    const url = buildDirectDownloadUrl(owner, repo, projectName, version, ext);
+    const os = getOSForDownload();
+    const arch = getArchForDownload();
+    const versionTag = version.startsWith('v') ? version : `v${version}`;
+    const filename = `${projectName}-${os}-${arch}-${versionTag}${ext}`;
+
+    try {
+      log.info(`尝试直接下载链接: ${url}`);
+      const response = await tauriFetch(url, {
+        method: 'HEAD',
+        headers: {
+          'User-Agent': buildUserAgent(),
+        },
+      });
+
+      if (response.ok) {
+        log.info(`直接下载链接可用: ${filename}`);
+        return { url, filename };
+      }
+      log.info(`直接下载链接不存在 (${response.status}): ${filename}`);
+    } catch (error) {
+      log.warn(`检查直接下载链接失败: ${filename}`, error);
+    }
+  }
+
+  return null;
+}
+
+/**
  * 根据 OS 和架构匹配合适的 GitHub Asset
  * 优先匹配 OS + 架构，多个匹配时优先选择名字带 mxu 的，否则选体积最大的
  */
@@ -500,17 +600,19 @@ function matchGitHubAsset(assets: GitHubAsset[]): GitHubAsset | null {
 export interface GetGitHubDownloadUrlOptions {
   githubUrl: string;
   targetVersion: string; // Mirror酱返回的目标版本号
+  projectName?: string; // 项目名称，用于拼接直接下载链接（来自 interface.name）
 }
 
 /**
  * 获取 GitHub 下载链接
  * 根据 Mirror酱返回的版本号在 GitHub releases 中查找对应的 release
+ * 如果 API 请求失败，会尝试直接拼接下载链接
  * @returns 下载链接和文件大小，或 null（失败时）
  */
 export async function getGitHubDownloadUrl(
   options: GetGitHubDownloadUrlOptions,
 ): Promise<{ url: string; size: number; filename: string } | null> {
-  const { githubUrl, targetVersion } = options;
+  const { githubUrl, targetVersion, projectName } = options;
 
   const parsed = parseGitHubUrl(githubUrl);
   if (!parsed) {
@@ -522,24 +624,40 @@ export async function getGitHubDownloadUrl(
 
   // 根据 Mirror酱返回的版本号查找对应的 release
   const release = await getGitHubReleaseByVersion(owner, repo, targetVersion);
-  if (!release) {
-    log.warn('未找到 GitHub Release');
-    return null;
-  }
 
-  const asset = matchGitHubAsset(release.assets);
-  if (!asset) {
+  if (release) {
+    // API 请求成功，使用 assets 匹配
+    const asset = matchGitHubAsset(release.assets);
+    if (asset) {
+      log.info(`匹配到 GitHub 下载文件: ${asset.name}`);
+      return {
+        url: asset.browser_download_url,
+        size: asset.size,
+        filename: asset.name,
+      };
+    }
     log.warn('未找到匹配当前系统的下载文件');
-    return null;
+  } else {
+    log.warn('GitHub API 请求失败，尝试直接拼接下载链接');
   }
 
-  log.info(`匹配到 GitHub 下载文件: ${asset.name}`);
+  // API 失败或未匹配到 asset，尝试直接拼接下载链接
+  if (projectName) {
+    const directResult = await tryDirectDownloadUrls(owner, repo, projectName, targetVersion);
+    if (directResult) {
+      log.info(`使用直接下载链接: ${directResult.filename}`);
+      return {
+        url: directResult.url,
+        size: 0, // 直接链接无法获取文件大小
+        filename: directResult.filename,
+      };
+    }
+    log.warn('直接下载链接也不可用');
+  } else {
+    log.warn('未提供项目名称，无法尝试直接下载链接');
+  }
 
-  return {
-    url: asset.browser_download_url,
-    size: asset.size,
-    filename: asset.name,
-  };
+  return null;
 }
 
 interface DownloadUpdateOptions {
@@ -649,6 +767,7 @@ export async function downloadUpdate(options: DownloadUpdateOptions): Promise<bo
 export interface CheckAndDownloadOptions extends CheckUpdateOptions {
   githubUrl?: string;
   basePath: string;
+  projectName?: string; // 项目名称，用于 GitHub API 失败时拼接直接下载链接
 }
 
 /**
@@ -664,7 +783,7 @@ export async function checkAndPrepareDownload(
     return null;
   }
 
-  const { githubUrl, basePath, cdk, channel, ...checkOptions } = options;
+  const { githubUrl, basePath, cdk, channel, projectName, ...checkOptions } = options;
 
   // 始终使用 Mirror酱 检查更新
   const updateInfo = await checkUpdate({ ...checkOptions, cdk, channel });
@@ -691,6 +810,7 @@ export async function checkAndPrepareDownload(
     const githubDownload = await getGitHubDownloadUrl({
       githubUrl,
       targetVersion: updateInfo.versionName,
+      projectName, // 用于 API 失败时拼接直接下载链接
     });
 
     if (githubDownload) {

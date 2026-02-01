@@ -458,6 +458,7 @@ function App() {
             userAgent: 'MXU',
             githubUrl: result.interface.github,
             basePath: downloadBasePath,
+            projectName: result.interface.name,
           })
             .then((updateResult) => {
               if (updateResult) {
