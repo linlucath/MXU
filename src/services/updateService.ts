@@ -884,6 +884,9 @@ export async function installUpdate(options: InstallUpdateOptions): Promise<bool
     onProgress?.('opening', zipPath);
 
     try {
+      // 在 Unix 系统上设置执行权限（Windows 上此调用无操作）
+      await invoke('set_executable', { filePath: zipPath });
+
       await openPath(zipPath);
       log.info('已打开安装程序');
       onProgress?.('done');

@@ -131,3 +131,27 @@ pub fn check_exe_path() -> Option<String> {
 
     None
 }
+
+/// 为文件设置可执行权限（仅 Unix 系统）
+/// Windows 上此命令不做任何操作
+#[tauri::command]
+pub fn set_executable(file_path: String) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = std::fs::metadata(&file_path)
+            .map_err(|e| format!("无法获取文件元数据 [{}]: {}", file_path, e))?;
+        let mut permissions = metadata.permissions();
+        // 添加可执行权限 (owner, group, others)
+        let mode = permissions.mode() | 0o111;
+        permissions.set_mode(mode);
+        std::fs::set_permissions(&file_path, permissions)
+            .map_err(|e| format!("无法设置执行权限 [{}]: {}", file_path, e))?;
+        log::info!("Set executable permission: {}", file_path);
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = file_path; // 避免未使用警告
+    }
+    Ok(())
+}
