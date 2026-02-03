@@ -181,6 +181,27 @@ export default {
     invalidInput: '输入格式不正确',
   },
 
+  // 前置/后置动作
+  action: {
+    preAction: '前置动作',
+    postAction: '后置动作',
+    program: '程序路径',
+    programPlaceholder: '输入程序路径或点击右侧浏览...',
+    args: '附加参数',
+    argsPlaceholder: '输入附加参数（可选）',
+    argsHint: '参数之间用空格分隔，程序执行时会等待其退出后再继续',
+    browse: '浏览',
+    // 日志消息
+    preActionStarting: '正在执行前置动作...',
+    preActionCompleted: '前置动作执行完成',
+    preActionFailed: '前置动作执行失败: {{error}}',
+    preActionExitCode: '前置动作退出码: {{code}}',
+    postActionStarting: '正在执行后置动作...',
+    postActionCompleted: '后置动作执行完成',
+    postActionFailed: '后置动作执行失败: {{error}}',
+    postActionExitCode: '后置动作退出码: {{code}}',
+  },
+
   // 选项编辑器
   optionEditor: {
     loadingDescription: '加载描述中...',
@@ -309,6 +330,8 @@ export default {
     searchPlaceholder: '搜索任务...',
     noResults: '没有找到匹配的任务',
     alreadyAdded: '已添加',
+    specialTasks: '特殊任务',
+    allSpecialTasksAdded: '已全部添加',
   },
 
   // 关于

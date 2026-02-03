@@ -181,6 +181,27 @@ export default {
     invalidInput: '입력 형식이 올바르지 않습니다',
   },
 
+  // 전/후 동작
+  action: {
+    preAction: '전처리 동작',
+    postAction: '후처리 동작',
+    program: '프로그램 경로',
+    programPlaceholder: '프로그램 경로를 입력하거나 찾아보기...',
+    args: '추가 인수',
+    argsPlaceholder: '추가 인수 입력 (선택사항)',
+    argsHint: '인수는 공백으로 구분됩니다. 프로그램이 종료될 때까지 대기합니다.',
+    browse: '찾아보기',
+    // 로그 메시지
+    preActionStarting: '전처리 동작 실행 중...',
+    preActionCompleted: '전처리 동작 완료',
+    preActionFailed: '전처리 동작 실패: {{error}}',
+    preActionExitCode: '전처리 동작 종료 코드: {{code}}',
+    postActionStarting: '후처리 동작 실행 중...',
+    postActionCompleted: '후처리 동작 완료',
+    postActionFailed: '후처리 동작 실패: {{error}}',
+    postActionExitCode: '후처리 동작 종료 코드: {{code}}',
+  },
+
   // 옵션 에디터
   optionEditor: {
     loadingDescription: '설명 로딩 중...',
@@ -305,6 +326,8 @@ export default {
     searchPlaceholder: '작업 검색...',
     noResults: '일치하는 작업을 찾을 수 없습니다',
     alreadyAdded: '추가됨',
+    specialTasks: '특수 작업',
+    allSpecialTasksAdded: '모두 추가됨',
   },
 
   // 정보

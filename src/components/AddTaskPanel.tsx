@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Plus, Sparkles, Loader2, AlertCircle, Play, Flag } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { maaService } from '@/services/maaService';
 import { useResolvedContent } from '@/services/contentResolver';
 import { loggers, generateTaskPipelineOverride } from '@/utils';
 import { getInterfaceLangKey } from '@/i18n';
 import { Tooltip } from './ui/Tooltip';
-import type { TaskItem } from '@/types/interface';
+import type { TaskItem, ActionConfig } from '@/types/interface';
 import clsx from 'clsx';
 
 const log = loggers.task;
@@ -116,6 +116,13 @@ function TaskButton({
   );
 }
 
+// 默认动作配置
+const defaultAction: ActionConfig = {
+  enabled: true,
+  program: '',
+  args: '',
+};
+
 export function AddTaskPanel() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,6 +140,9 @@ export function AddTaskPanel() {
     // 新增任务标记
     newTaskNames,
     removeNewTaskName,
+    // 前后置动作
+    setInstancePreAction,
+    setInstancePostAction,
   } = useAppStore();
 
   const instance = getActiveInstance();
@@ -304,6 +314,51 @@ export function AddTaskPanel() {
           </div>
         )}
       </div>
+
+      {/* 特殊任务：前后置动作 */}
+      {instance && (
+        <div className="border-t border-border p-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-muted flex-shrink-0">{t('addTaskPanel.specialTasks')}</span>
+            <div className="flex-1 flex gap-2">
+              {/* 前置动作 */}
+              {!instance.preAction && (
+                <button
+                  onClick={() => setInstancePreAction(instance.id, defaultAction)}
+                  disabled={instance.isRunning}
+                  className={clsx(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors',
+                    'bg-bg-secondary hover:bg-bg-hover text-text-secondary border border-border hover:border-accent',
+                    instance.isRunning && 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  <Play className="w-3.5 h-3.5 text-success" />
+                  <span>{t('action.preAction')}</span>
+                </button>
+              )}
+              {/* 后置动作 */}
+              {!instance.postAction && (
+                <button
+                  onClick={() => setInstancePostAction(instance.id, defaultAction)}
+                  disabled={instance.isRunning}
+                  className={clsx(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors',
+                    'bg-bg-secondary hover:bg-bg-hover text-text-secondary border border-border hover:border-accent',
+                    instance.isRunning && 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  <Flag className="w-3.5 h-3.5 text-warning" />
+                  <span>{t('action.postAction')}</span>
+                </button>
+              )}
+              {/* 都已添加时的提示 */}
+              {instance.preAction && instance.postAction && (
+                <span className="text-xs text-text-muted italic">{t('addTaskPanel.allSpecialTasksAdded')}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

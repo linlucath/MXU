@@ -182,6 +182,27 @@ export default {
     invalidInput: '入力形式が正しくありません',
   },
 
+  // 前処理/後処理アクション
+  action: {
+    preAction: '前処理アクション',
+    postAction: '後処理アクション',
+    program: 'プログラムパス',
+    programPlaceholder: 'プログラムパスを入力または参照...',
+    args: '追加引数',
+    argsPlaceholder: '追加引数を入力（オプション）',
+    argsHint: '引数はスペースで区切ります。プログラムが終了するまで待機します。',
+    browse: '参照',
+    // ログメッセージ
+    preActionStarting: '前処理アクションを実行中...',
+    preActionCompleted: '前処理アクション完了',
+    preActionFailed: '前処理アクション失敗: {{error}}',
+    preActionExitCode: '前処理アクション終了コード: {{code}}',
+    postActionStarting: '後処理アクションを実行中...',
+    postActionCompleted: '後処理アクション完了',
+    postActionFailed: '後処理アクション失敗: {{error}}',
+    postActionExitCode: '後処理アクション終了コード: {{code}}',
+  },
+
   // オプションエディタ
   optionEditor: {
     loadingDescription: '説明を読み込み中...',
@@ -311,6 +332,8 @@ export default {
     searchPlaceholder: 'タスクを検索...',
     noResults: '一致するタスクが見つかりません',
     alreadyAdded: '追加済み',
+    specialTasks: '特殊タスク',
+    allSpecialTasksAdded: 'すべて追加済み',
   },
 
   // このアプリについて

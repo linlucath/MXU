@@ -641,6 +641,28 @@ export const maaService = {
       throw err;
     }
   },
+
+  /**
+   * 执行前置/后置动作（运行程序并等待其退出）
+   * @param program 程序路径
+   * @param args 附加参数
+   * @param cwd 工作目录（可选）
+   * @returns 程序退出码
+   */
+  async runAction(program: string, args: string, cwd?: string): Promise<number> {
+    if (!isTauri()) {
+      throw new Error('此功能仅在 Tauri 环境中可用');
+    }
+    log.info('执行动作:', program, args);
+    try {
+      const exitCode = await invoke<number>('run_action', { program, args, cwd: cwd || null });
+      log.info('动作执行完成, 退出码:', exitCode);
+      return exitCode;
+    } catch (err) {
+      log.error('动作执行失败:', err);
+      throw err;
+    }
+  },
 };
 
 export default maaService;

@@ -178,6 +178,27 @@ export default {
     invalidInput: '輸入格式不正確',
   },
 
+  // 前置/後置動作
+  action: {
+    preAction: '前置動作',
+    postAction: '後置動作',
+    program: '程式路徑',
+    programPlaceholder: '輸入程式路徑或點擊右側瀏覽...',
+    args: '附加參數',
+    argsPlaceholder: '輸入附加參數（可選）',
+    argsHint: '參數之間用空格分隔，程式執行時會等待其結束後再繼續',
+    browse: '瀏覽',
+    // 日誌訊息
+    preActionStarting: '正在執行前置動作...',
+    preActionCompleted: '前置動作執行完成',
+    preActionFailed: '前置動作執行失敗: {{error}}',
+    preActionExitCode: '前置動作結束碼: {{code}}',
+    postActionStarting: '正在執行後置動作...',
+    postActionCompleted: '後置動作執行完成',
+    postActionFailed: '後置動作執行失敗: {{error}}',
+    postActionExitCode: '後置動作結束碼: {{code}}',
+  },
+
   // 選項編輯器
   optionEditor: {
     loadingDescription: '載入描述中...',
@@ -306,6 +327,8 @@ export default {
     searchPlaceholder: '搜尋任務...',
     noResults: '沒有找到符合的任務',
     alreadyAdded: '已新增',
+    specialTasks: '特殊任務',
+    allSpecialTasksAdded: '已全部新增',
   },
 
   // 關於

@@ -185,6 +185,27 @@ export default {
     invalidInput: 'Invalid input format',
   },
 
+  // Pre/Post Actions
+  action: {
+    preAction: 'Pre-Action',
+    postAction: 'Post-Action',
+    program: 'Program Path',
+    programPlaceholder: 'Enter program path or browse...',
+    args: 'Arguments',
+    argsPlaceholder: 'Enter additional arguments (optional)',
+    argsHint: 'Arguments are separated by spaces. The program will run and wait for it to exit before continuing.',
+    browse: 'Browse',
+    // Log messages
+    preActionStarting: 'Running pre-action...',
+    preActionCompleted: 'Pre-action completed',
+    preActionFailed: 'Pre-action failed: {{error}}',
+    preActionExitCode: 'Pre-action exit code: {{code}}',
+    postActionStarting: 'Running post-action...',
+    postActionCompleted: 'Post-action completed',
+    postActionFailed: 'Post-action failed: {{error}}',
+    postActionExitCode: 'Post-action exit code: {{code}}',
+  },
+
   // Option Editor
   optionEditor: {
     loadingDescription: 'Loading description...',
@@ -313,6 +334,8 @@ export default {
     searchPlaceholder: 'Search tasks...',
     noResults: 'No matching tasks found',
     alreadyAdded: 'Already added',
+    specialTasks: 'Special Tasks',
+    allSpecialTasksAdded: 'All added',
   },
 
   // About

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Instance, SelectedTask, OptionValue } from '@/types/interface';
+import type { Instance, SelectedTask, OptionValue, ActionConfig } from '@/types/interface';
 import type { MxuConfig, RecentlyClosedInstance } from '@/types/config';
 import {
   defaultWindowSize,
@@ -257,6 +257,8 @@ export const useAppStore = create<AppState>()(
               optionValues: t.optionValues,
             })),
             schedulePolicies: instanceToClose.schedulePolicies,
+            preAction: instanceToClose.preAction,
+            postAction: instanceToClose.postAction,
           };
           // 添加到列表头部，并限制最大条目数
           newRecentlyClosed = [closedRecord, ...state.recentlyClosed].slice(0, MAX_RECENTLY_CLOSED);
@@ -595,6 +597,8 @@ export const useAppStore = create<AppState>()(
           optionValues: { ...t.optionValues },
         })),
         isRunning: false,
+        preAction: sourceInstance.preAction ? { ...sourceInstance.preAction } : undefined,
+        postAction: sourceInstance.postAction ? { ...sourceInstance.postAction } : undefined,
       };
 
       set({
@@ -739,6 +743,8 @@ export const useAppStore = create<AppState>()(
           selectedTasks: savedTasks,
           isRunning: false,
           schedulePolicies: inst.schedulePolicies,
+          preAction: inst.preAction,
+          postAction: inst.postAction,
         };
       });
 
@@ -936,6 +942,17 @@ export const useAppStore = create<AppState>()(
     setInstanceSavedDevice: (instanceId, savedDevice) =>
       set((state) => ({
         instances: state.instances.map((i) => (i.id === instanceId ? { ...i, savedDevice } : i)),
+      })),
+
+    // 前置/后置动作设置
+    setInstancePreAction: (instanceId: string, action: ActionConfig | undefined) =>
+      set((state) => ({
+        instances: state.instances.map((i) => (i.id === instanceId ? { ...i, preAction: action } : i)),
+      })),
+
+    setInstancePostAction: (instanceId: string, action: ActionConfig | undefined) =>
+      set((state) => ({
+        instances: state.instances.map((i) => (i.id === instanceId ? { ...i, postAction: action } : i)),
       })),
 
     // 设备列表缓存
@@ -1152,6 +1169,8 @@ export const useAppStore = create<AppState>()(
         })),
         isRunning: false,
         schedulePolicies: closedInstance.schedulePolicies,
+        preAction: closedInstance.preAction,
+        postAction: closedInstance.postAction,
       };
 
       // 恢复选中的控制器和资源状态
@@ -1412,6 +1431,8 @@ function generateConfig(): MxuConfig {
         optionValues: t.optionValues,
       })),
       schedulePolicies: inst.schedulePolicies,
+      preAction: inst.preAction,
+      postAction: inst.postAction,
     })),
     settings: {
       theme: state.theme,

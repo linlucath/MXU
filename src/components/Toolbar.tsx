@@ -191,6 +191,40 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
               });
             }
 
+            // 执行后置动作（如果启用且有程序路径）
+            const runningInstance = useAppStore.getState().instances.find(i => i.id === runningInstanceId);
+            if (runningInstance?.postAction?.enabled && runningInstance.postAction.program.trim()) {
+              log.info('执行后置动作:', runningInstance.postAction.program);
+              addLog(runningInstanceId, {
+                type: 'info',
+                message: t('action.postActionStarting'),
+              });
+              maaService.runAction(
+                runningInstance.postAction.program,
+                runningInstance.postAction.args,
+                basePath,
+              ).then((exitCode) => {
+                if (exitCode !== 0) {
+                  log.warn('后置动作退出码非零:', exitCode);
+                  addLog(runningInstanceId, {
+                    type: 'warning',
+                    message: t('action.postActionExitCode', { code: exitCode }),
+                  });
+                } else {
+                  addLog(runningInstanceId, {
+                    type: 'success',
+                    message: t('action.postActionCompleted'),
+                  });
+                }
+              }).catch((err) => {
+                log.error('后置动作执行失败:', err);
+                addLog(runningInstanceId, {
+                  type: 'error',
+                  message: t('action.postActionFailed', { error: String(err) }),
+                });
+              });
+            }
+
             setInstanceTaskStatus(runningInstanceId, 'Succeeded');
             updateInstance(runningInstanceId, { isRunning: false });
             setInstanceCurrentTaskId(runningInstanceId, null);
@@ -229,6 +263,40 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
             if (projectInterface?.agent) {
               maaService.stopAgent(runningInstanceId).catch((err) => {
                 log.error('停止 Agent 失败:', err);
+              });
+            }
+
+            // 执行后置动作（即使有任务失败也执行，如果启用且有程序路径）
+            const runningInstance = useAppStore.getState().instances.find(i => i.id === runningInstanceId);
+            if (runningInstance?.postAction?.enabled && runningInstance.postAction.program.trim()) {
+              log.info('执行后置动作:', runningInstance.postAction.program);
+              addLog(runningInstanceId, {
+                type: 'info',
+                message: t('action.postActionStarting'),
+              });
+              maaService.runAction(
+                runningInstance.postAction.program,
+                runningInstance.postAction.args,
+                basePath,
+              ).then((exitCode) => {
+                if (exitCode !== 0) {
+                  log.warn('后置动作退出码非零:', exitCode);
+                  addLog(runningInstanceId, {
+                    type: 'warning',
+                    message: t('action.postActionExitCode', { code: exitCode }),
+                  });
+                } else {
+                  addLog(runningInstanceId, {
+                    type: 'success',
+                    message: t('action.postActionCompleted'),
+                  });
+                }
+              }).catch((err) => {
+                log.error('后置动作执行失败:', err);
+                addLog(runningInstanceId, {
+                  type: 'error',
+                  message: t('action.postActionFailed', { error: String(err) }),
+                });
               });
             }
 
@@ -998,6 +1066,41 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
         }
 
         setAutoConnectPhase('idle');
+
+        // 执行前置动作（如果启用且有程序路径）
+        if (instance.preAction?.enabled && instance.preAction.program.trim()) {
+          log.info('执行前置动作:', instance.preAction.program);
+          addLog(instance.id, {
+            type: 'info',
+            message: t('action.preActionStarting'),
+          });
+          try {
+            const exitCode = await maaService.runAction(
+              instance.preAction.program,
+              instance.preAction.args,
+              basePath,
+            );
+            if (exitCode !== 0) {
+              log.warn('前置动作退出码非零:', exitCode);
+              addLog(instance.id, {
+                type: 'warning',
+                message: t('action.preActionExitCode', { code: exitCode }),
+              });
+            } else {
+              addLog(instance.id, {
+                type: 'success',
+                message: t('action.preActionCompleted'),
+              });
+            }
+          } catch (err) {
+            log.error('前置动作执行失败:', err);
+            addLog(instance.id, {
+              type: 'error',
+              message: t('action.preActionFailed', { error: String(err) }),
+            });
+            // 前置动作失败不阻止任务执行，继续
+          }
+        }
 
         const enabledTasks = tasks.filter((t) => t.enabled);
         log.info('开始执行任务, 数量:', enabledTasks.length);
