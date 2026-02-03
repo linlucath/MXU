@@ -826,6 +826,35 @@ pub unsafe fn from_cstr(ptr: *const c_char) -> String {
 /// 全局 AppHandle 存储，用于在回调中发送事件到前端
 static APP_HANDLE: Lazy<Mutex<Option<AppHandle>>> = Lazy::new(|| Mutex::new(None));
 
+/// 控制器实例查找函数类型
+/// 根据控制器指针地址查找使用该控制器的实例 ID 列表
+type ControllerInstanceLookupFn = fn(usize) -> Vec<String>;
+
+/// 全局控制器实例查找函数
+static CONTROLLER_INSTANCE_LOOKUP: Lazy<Mutex<Option<ControllerInstanceLookupFn>>> =
+    Lazy::new(|| Mutex::new(None));
+
+/// 注册控制器实例查找函数（由 commands 模块在初始化时调用）
+pub fn register_controller_instance_lookup(lookup_fn: ControllerInstanceLookupFn) {
+    if let Ok(mut guard) = CONTROLLER_INSTANCE_LOOKUP.lock() {
+        *guard = Some(lookup_fn);
+    }
+}
+
+/// 通过控制器指针查找实例 ID 列表
+fn lookup_controller_instances(ptr: usize) -> Vec<String> {
+    match CONTROLLER_INSTANCE_LOOKUP.lock() {
+        Ok(guard) => {
+            if let Some(lookup_fn) = *guard {
+                lookup_fn(ptr)
+            } else {
+                Vec::new()
+            }
+        }
+        Err(_) => Vec::new(),
+    }
+}
+
 /// 设置全局 AppHandle（用于发送事件到前端）
 pub fn set_app_handle(handle: AppHandle) {
     if let Ok(mut guard) = APP_HANDLE.lock() {
@@ -840,6 +869,10 @@ pub struct MaaCallbackEvent {
     pub message: String,
     /// 详细数据 JSON 字符串
     pub details: String,
+    /// 使用该对象的实例 ID 列表（用于前端过滤）
+    /// 仅在能确定实例列表时填充（如控制器回调）
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub instance_ids: Vec<String>,
 }
 
 /// Agent 输出事件载荷
@@ -898,7 +931,7 @@ pub fn emit_agent_output(instance_id: &str, stream: &str, line: &str) {
 /// 由 MaaFramework 在工作线程中调用，将消息转发到前端
 /// 注意：此函数必须尽快返回，避免阻塞 MaaFramework 的工作线程
 extern "C" fn maa_event_callback(
-    _handle: *mut c_void,
+    handle: *mut c_void,
     message: *const c_char,
     details_json: *const c_char,
     _trans_arg: *mut c_void,
@@ -926,8 +959,22 @@ extern "C" fn maa_event_callback(
             details_str
         );
 
+        // 如果是控制器回调，查找使用该控制器的实例列表
+        let instance_ids = if message_str.starts_with("Controller.") && !handle.is_null() {
+            let ids = lookup_controller_instances(handle as usize);
+            if !ids.is_empty() {
+                log::debug!(
+                    "[callback] Controller callback, dispatching to instances: {:?}",
+                    ids
+                );
+            }
+            ids
+        } else {
+            Vec::new()
+        };
+
         // 快速克隆 AppHandle 后立即释放锁，避免阻塞 MaaFramework 工作线程
-        let handle = match APP_HANDLE.lock() {
+        let app_handle = match APP_HANDLE.lock() {
             Ok(guard) => guard.clone(),
             Err(e) => {
                 log::error!("[callback] Failed to lock APP_HANDLE: {}", e);
@@ -936,12 +983,13 @@ extern "C" fn maa_event_callback(
         };
 
         // 使用克隆的 handle 发送事件（锁已释放）
-        if let Some(handle) = handle {
+        if let Some(app_handle) = app_handle {
             let event = MaaCallbackEvent {
                 message: message_str,
                 details: details_str,
+                instance_ids,
             };
-            if let Err(e) = handle.emit("maa-callback", event) {
+            if let Err(e) = app_handle.emit("maa-callback", event) {
                 log::error!("[callback] Failed to emit event: {}", e);
             }
         } else {

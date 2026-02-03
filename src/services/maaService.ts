@@ -23,6 +23,8 @@ export interface MaaCallbackEvent {
   message: string;
   /** 详细数据 JSON 字符串 */
   details: string;
+  /** 使用该对象的实例 ID 列表（用于前端过滤，仅控制器回调时存在） */
+  instance_ids?: string[];
 }
 
 /** 回调消息详情（通用字段） */

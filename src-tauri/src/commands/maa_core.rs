@@ -9,7 +9,8 @@ use tauri::State;
 
 use crate::maa_ffi::{
     from_cstr, get_event_callback, get_maa_version, get_maa_version_standalone, init_maa_library,
-    to_cstring, MaaImageBuffer, MaaLibrary, MaaToolkitAdbDeviceList, MaaToolkitDesktopWindowList,
+    register_controller_instance_lookup, to_cstring, MaaImageBuffer, MaaLibrary,
+    MaaToolkitAdbDeviceList, MaaToolkitDesktopWindowList,
     MAA_CTRL_OPTION_SCREENSHOT_TARGET_SHORT_SIDE, MAA_GAMEPAD_TYPE_DUALSHOCK4,
     MAA_GAMEPAD_TYPE_XBOX360, MAA_INVALID_ID, MAA_LIBRARY, MAA_STATUS_PENDING, MAA_STATUS_RUNNING,
     MAA_STATUS_SUCCEEDED, MAA_WIN32_SCREENCAP_DXGI_DESKTOPDUP,
@@ -17,7 +18,7 @@ use crate::maa_ffi::{
 
 use super::types::{
     AdbDevice, ConnectionStatus, ControllerConfig, MaaState, TaskStatus, VersionCheckResult,
-    Win32Window,
+    Win32Window, CONTROLLER_POOL,
 };
 use super::utils::{get_maafw_dir, normalize_path};
 
@@ -55,6 +56,9 @@ pub fn maa_init(state: State<Arc<MaaState>>, lib_dir: Option<String>) -> Result<
 
     info!("maa_init loading library...");
     init_maa_library(&lib_path).map_err(|e| e.to_string())?;
+
+    // 注册控制器实例查找函数，用于回调时派发事件给相关实例
+    register_controller_instance_lookup(|ptr| CONTROLLER_POOL.find_instances_by_controller_ptr(ptr));
 
     let version = get_maa_version().unwrap_or_default();
     info!("maa_init success, version: {}", version);
@@ -377,6 +381,7 @@ pub fn maa_create_instance(state: State<Arc<MaaState>>, instance_id: String) -> 
 }
 
 /// 销毁实例
+/// 会正确释放控制器池中的引用，当引用计数为 0 时销毁控制器
 #[tauri::command]
 pub fn maa_destroy_instance(
     state: State<Arc<MaaState>>,
@@ -384,6 +389,33 @@ pub fn maa_destroy_instance(
 ) -> Result<(), String> {
     info!("maa_destroy_instance called, instance_id: {}", instance_id);
 
+    // 先释放控制器引用
+    let controller_to_destroy = {
+        let instances = state.instances.lock().map_err(|e| e.to_string())?;
+        if let Some(instance) = instances.get(&instance_id) {
+            if let Some(ref pool_key) = instance.controller_pool_key {
+                CONTROLLER_POOL.release(pool_key, &instance_id)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+
+    // 如果控制器引用计数为 0，销毁控制器
+    if let Some(controller) = controller_to_destroy {
+        if let Ok(guard) = MAA_LIBRARY.lock() {
+            if let Some(lib) = guard.as_ref() {
+                debug!("Destroying controller (no more references)...");
+                unsafe {
+                    (lib.maa_controller_destroy)(controller);
+                }
+            }
+        }
+    }
+
+    // 移除实例（会触发 InstanceRuntime 的 Drop）
     let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
     let removed = instances.remove(&instance_id).is_some();
 
@@ -404,6 +436,8 @@ pub fn maa_destroy_instance(
 
 /// 连接控制器（异步，通过回调通知完成状态）
 /// 返回连接请求 ID，前端通过监听 maa-callback 事件获取完成状态
+/// 
+/// 控制器复用机制：相同参数的控制器会被复用，避免重复创建 C 句柄
 #[tauri::command]
 pub fn maa_connect_controller(
     state: State<Arc<MaaState>>,
@@ -423,8 +457,70 @@ pub fn maa_connect_controller(
         "MaaFramework not initialized".to_string()
     })?;
 
-    debug!("MaaFramework library loaded, creating controller...");
+    // 生成控制器池键
+    let pool_key = config.pool_key();
+    debug!("Controller pool key: {}", pool_key);
 
+    // 先清理旧的控制器引用（如果有）
+    {
+        let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+        if let Some(instance) = instances.get_mut(&instance_id) {
+            // 如果实例已有控制器，先释放旧的引用
+            if let Some(old_key) = instance.controller_pool_key.take() {
+                debug!("Releasing old controller reference for key: {}", old_key);
+                if let Some(ctrl_to_destroy) = CONTROLLER_POOL.release(&old_key, &instance_id)
+                {
+                    debug!("Destroying old controller (no more references)...");
+                    unsafe {
+                        (lib.maa_controller_destroy)(ctrl_to_destroy);
+                    }
+                }
+                instance.controller = None;
+            }
+
+            // 清理旧的 tasker（因为 tasker 绑定了旧的 controller）
+            if let Some(old_tasker) = instance.tasker.take() {
+                debug!("Destroying old tasker (bound to old controller)...");
+                unsafe {
+                    (lib.maa_tasker_destroy)(old_tasker);
+                }
+            }
+        }
+    }
+
+    // 尝试从池中获取已有的控制器
+    if let Some(existing_controller) = CONTROLLER_POOL.get(&pool_key, &instance_id) {
+        info!("Reusing existing controller from pool");
+
+        // 检查控制器是否已连接
+        let connected = unsafe { (lib.maa_controller_connected)(existing_controller) != 0 };
+
+        // 更新实例状态
+        {
+            let mut instances = state.instances.lock().map_err(|e| e.to_string())?;
+            let instance = instances
+                .get_mut(&instance_id)
+                .ok_or("Instance not found")?;
+            instance.controller = Some(existing_controller);
+            instance.controller_pool_key = Some(pool_key);
+        }
+
+        if connected {
+            // 已连接，返回 0 表示无需等待连接
+            info!("Controller already connected, returning 0");
+            return Ok(0);
+        } else {
+            // 未连接，重新发起连接
+            debug!("Controller not connected, posting connection...");
+            let conn_id = unsafe { (lib.maa_controller_post_connection)(existing_controller) };
+            info!("MaaControllerPostConnection returned conn_id: {}", conn_id);
+            return Ok(conn_id);
+        }
+    }
+
+    debug!("MaaFramework library loaded, creating new controller...");
+
+    // 创建新控制器
     let controller = unsafe {
         match &config {
             ControllerConfig::Adb {
@@ -550,6 +646,9 @@ pub fn maa_connect_controller(
         return Err("Failed to post connection".to_string());
     }
 
+    // 将控制器添加到池中
+    CONTROLLER_POOL.insert(pool_key.clone(), controller, &instance_id);
+
     // 更新实例状态
     debug!("Updating instance state...");
     {
@@ -558,23 +657,8 @@ pub fn maa_connect_controller(
             .get_mut(&instance_id)
             .ok_or("Instance not found")?;
 
-        // 清理旧的控制器
-        if let Some(old_controller) = instance.controller.take() {
-            debug!("Destroying old controller...");
-            unsafe {
-                (lib.maa_controller_destroy)(old_controller);
-            }
-        }
-
-        // 清理旧的 tasker
-        if let Some(old_tasker) = instance.tasker.take() {
-            debug!("Destroying old tasker (bound to old controller)...");
-            unsafe {
-                (lib.maa_tasker_destroy)(old_tasker);
-            }
-        }
-
         instance.controller = Some(controller);
+        instance.controller_pool_key = Some(pool_key);
     }
 
     Ok(conn_id)
