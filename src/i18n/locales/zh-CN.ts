@@ -94,7 +94,7 @@ export default {
     autoStartInstanceNone: '不自动执行',
     autoStartInstanceRemoved: '之前选择的配置「{{name}}」已被删除，自动执行已停用',
     autoRunOnLaunch: '手动启动时也自动执行',
-    autoRunOnLaunchHint: '每次手动打开程序时，也自动执行上方选定的配置（默认仅在开机自启动时触发）',
+    autoRunOnLaunchHint: '每次手动打开程序时，也自动执行上方选定的配置（关闭则仅在开机自启动时触发）',
     confirmBeforeDelete: '删除操作需要二次确认',
     confirmBeforeDeleteHint: '删除任务、清空列表、导入覆盖等操作会先弹出确认对话框',
     maxLogsPerInstance: '每个实例保留的日志上限',

@@ -96,7 +96,7 @@ export default {
       'Previously selected configuration "{{name}}" has been deleted. Auto-execute has been disabled',
     autoRunOnLaunch: 'Also auto-execute on manual launch',
     autoRunOnLaunchHint:
-      'Auto-execute the selected configuration every time you manually open the app (by default, only triggered on system startup)',
+      'Automatically execute the selected configuration when manually opening the app (if disabled, only triggers on system startup)',
     confirmBeforeDelete: 'Confirm delete actions',
     confirmBeforeDeleteHint: 'Show confirmation before delete/clear list/import overwrite, etc.',
     maxLogsPerInstance: 'Max logs per instance',

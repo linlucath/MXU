@@ -95,7 +95,7 @@ export default {
       '이전에 선택한 구성 "{{name}}"이(가) 삭제되었습니다. 자동 실행이 비활성화되었습니다',
     autoRunOnLaunch: '수동 실행 시에도 자동 실행',
     autoRunOnLaunchHint:
-      '앱을 수동으로 열 때마다 위에서 선택한 구성을 자동 실행합니다 (기본적으로 시스템 시작 시에만 트리거됨)',
+      '앱을 수동으로 열 때도 위에서 선택한 구성을 자동 실행합니다 (비활성화 시 시스템 시작 시에만 실행)',
     confirmBeforeDelete: '삭제 작업 확인',
     confirmBeforeDeleteHint:
       '삭제/목록 비우기/가져오기 덮어쓰기 등 전에 확인 대화 상자를 표시합니다',

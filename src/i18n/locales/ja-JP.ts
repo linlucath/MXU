@@ -96,7 +96,7 @@ export default {
       '以前選択した設定「{{name}}」が削除されました。自動実行は無効になりました',
     autoRunOnLaunch: '手動起動時も自動実行',
     autoRunOnLaunchHint:
-      'アプリを手動で開くたびに、上で選択した設定を自動実行します（デフォルトではシステム起動時のみ）',
+      '手動でアプリを開く際も、上で選択した設定を自動実行します（無効な場合はシステム起動時のみ実行）',
     confirmBeforeDelete: '削除操作の前に確認する',
     confirmBeforeDeleteHint: '削除/一覧クリア/上書きインポート等の前に確認ダイアログを表示します',
     maxLogsPerInstance: 'インスタンスあたりのログ上限',

@@ -93,7 +93,7 @@ export default {
     autoStartInstanceNone: '不自動執行',
     autoStartInstanceRemoved: '之前選擇的配置「{{name}}」已被刪除，自動執行已停用',
     autoRunOnLaunch: '手動啟動時也自動執行',
-    autoRunOnLaunchHint: '每次手動開啟程式時，也自動執行上方選定的配置（預設僅在開機自啟動時觸發）',
+    autoRunOnLaunchHint: '每次手動開啟程式時，也自動執行上方選定的配置（關閉則僅在開機自啟動時觸發）',
     confirmBeforeDelete: '刪除操作需要二次確認',
     confirmBeforeDeleteHint: '刪除任務、清空列表、匯入覆蓋等操作會先彈出確認對話框',
     maxLogsPerInstance: '每個實例保留的日誌上限',
