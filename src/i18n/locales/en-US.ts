@@ -296,6 +296,7 @@ export default {
     loadDescriptionFailed: 'Failed to load',
     searchPlaceholder: 'Search options...',
     noMatchingOptions: 'No matching options',
+    incompatibleController: 'Not supported by current controller',
   },
 
   // Controller

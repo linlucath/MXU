@@ -290,6 +290,7 @@ export default {
     loadDescriptionFailed: '加载失败',
     searchPlaceholder: '搜索选项...',
     noMatchingOptions: '无匹配选项',
+    incompatibleController: '不支持当前控制器',
   },
 
   // 控制器

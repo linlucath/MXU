@@ -295,6 +295,7 @@ export default {
     loadDescriptionFailed: '読み込みに失敗しました',
     searchPlaceholder: 'オプションを検索...',
     noMatchingOptions: '一致するオプションがありません',
+    incompatibleController: '現在のコントローラーに対応していません',
   },
 
   // コントローラー

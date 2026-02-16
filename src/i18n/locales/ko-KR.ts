@@ -294,6 +294,7 @@ export default {
     loadDescriptionFailed: '로딩 실패',
     searchPlaceholder: '옵션 검색...',
     noMatchingOptions: '일치하는 옵션 없음',
+    incompatibleController: '현재 컨트롤러에서 지원되지 않음',
   },
 
   // 컨트롤러

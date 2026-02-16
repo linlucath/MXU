@@ -136,6 +136,7 @@ export interface SelectOption {
   label?: string;
   description?: string;
   icon?: string;
+  controller?: string[];
   cases: CaseItem[];
   default_case?: string;
 }
@@ -145,6 +146,7 @@ export interface SwitchOption {
   label?: string;
   description?: string;
   icon?: string;
+  controller?: string[];
   cases: [CaseItem, CaseItem];
   default_case?: string;
 }
@@ -154,6 +156,7 @@ export interface InputOption {
   label?: string;
   description?: string;
   icon?: string;
+  controller?: string[];
   inputs: InputItem[];
   pipeline_override?: Record<string, unknown>;
 }

@@ -289,6 +289,7 @@ export default {
     loadDescriptionFailed: '載入失敗',
     searchPlaceholder: '搜尋選項...',
     noMatchingOptions: '無匹配選項',
+    incompatibleController: '不支援目前控制器',
   },
 
   // 控制器

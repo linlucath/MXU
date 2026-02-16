@@ -144,6 +144,16 @@ type OptionGroup =
   | { type: 'single'; optionKey: string }
   | { type: 'switchGrid'; optionKeys: string[] };
 
+/** 检查选项是否与当前控制器不兼容 */
+function isOptionControllerIncompatible(
+  optionDef: import('@/types/interface').OptionDefinition | null | undefined,
+  currentControllerName: string | undefined,
+): boolean {
+  if (!optionDef?.controller || optionDef.controller.length === 0) return false;
+  if (!currentControllerName) return false;
+  return !optionDef.controller.includes(currentControllerName);
+}
+
 /** 选项列表渲染器：自动将连续的无子选项 switch 分组为网格 */
 function OptionListRenderer({
   instanceId,
@@ -151,12 +161,14 @@ function OptionListRenderer({
   optionKeys,
   optionValues,
   disabled,
+  currentControllerName,
 }: {
   instanceId: string;
   taskId: string;
   optionKeys: string[];
   optionValues: Record<string, import('@/types/interface').OptionValue>;
   disabled: boolean;
+  currentControllerName: string | undefined;
 }) {
   const { projectInterface, resolveI18nText, language } = useAppStore();
   const { t } = useTranslation();
@@ -225,11 +237,15 @@ function OptionListRenderer({
           : undefined
         : resolveI18nText(optionDef?.description, langKey);
 
+      // 检查选项是否与当前控制器不兼容
+      const controllerIncompatible = isOptionControllerIncompatible(optionDef, currentControllerName);
+
       return {
         optionKey,
         label,
         description,
         isChecked,
+        controllerIncompatible,
       };
     });
   };
@@ -248,6 +264,8 @@ function OptionListRenderer({
             />
           );
         }
+        const optionDef = getOptionDef(group.optionKey);
+        const optionControllerIncompatible = isOptionControllerIncompatible(optionDef, currentControllerName);
         return (
           <OptionEditor
             key={group.optionKey}
@@ -255,7 +273,8 @@ function OptionListRenderer({
             taskId={taskId}
             optionKey={group.optionKey}
             value={optionValues[group.optionKey]}
-            disabled={disabled}
+            disabled={disabled || optionControllerIncompatible}
+            controllerIncompatible={optionControllerIncompatible}
           />
         );
       })}
@@ -979,6 +998,7 @@ export function TaskItem({ instanceId, task }: TaskItemProps) {
                   optionKeys={taskDef.option || []}
                   optionValues={task.optionValues}
                   disabled={!canEditOptions || isIncompatible}
+                  currentControllerName={currentControllerName}
                 />
               )}
             </div>
