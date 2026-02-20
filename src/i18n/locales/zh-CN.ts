@@ -96,6 +96,9 @@ export default {
     autoRunOnLaunch: '手动启动时也自动执行',
     autoRunOnLaunchHint:
       '每次手动打开程序时，也自动执行上方选定的配置（关闭则仅在开机自启动时触发）',
+    gamePath: '游戏路径',
+    gamePathHint: '开始任务时若未找到游戏窗口，将启动此路径并等待 60 秒后重试',
+    gamePathPlaceholder: '选择游戏可执行文件路径（如 xxx.exe）',
     confirmBeforeDelete: '删除操作需要二次确认',
     confirmBeforeDeleteHint: '删除任务、清空列表、导入覆盖等操作会先弹出确认对话框',
     maxLogsPerInstance: '每个实例保留的日志上限',
@@ -280,6 +283,11 @@ export default {
     preActionFailed: '前置程序执行失败: {{error}}',
     preActionExitCode: '前置程序退出码: {{code}}',
     preActionConnectDelay: '等待 {{seconds}} 秒后连接...',
+    gamePathNotSet: '未设置游戏路径，无法自动拉起游戏重试',
+    autoLaunchGameStarting: '未找到游戏窗口，正在启动游戏：{{path}}',
+    autoLaunchGameWaiting: '游戏已启动，等待 {{seconds}} 秒后重试...',
+    autoLaunchGameRetrying: '正在重试查找游戏窗口{{name}}',
+    autoLaunchGameFailed: '自动启动游戏失败：{{error}}',
   },
 
   // 选项编辑器

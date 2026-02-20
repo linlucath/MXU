@@ -321,6 +321,8 @@ export interface AppState {
   // 托盘设置
   minimizeToTray: boolean;
   setMinimizeToTray: (enabled: boolean) => void;
+  gamePath: string;
+  setGamePath: (path: string) => void;
 
   // 启动后自动执行的实例 ID
   autoStartInstanceId: string | undefined;

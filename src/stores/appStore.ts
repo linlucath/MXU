@@ -971,6 +971,7 @@ export const useAppStore = create<AppState>()(
         autoRunOnLaunch: config.settings.autoRunOnLaunch ?? false,
         autoStartRemovedInstanceName: config.settings.autoStartRemovedInstanceName,
         minimizeToTray: config.settings.minimizeToTray ?? false,
+        gamePath: config.settings.gamePath ?? '',
         onboardingCompleted: config.settings.onboardingCompleted ?? false,
         preActionConnectDelaySec: config.settings.preActionConnectDelaySec ?? 5,
         hotkeys: config.settings.hotkeys ?? {
@@ -1280,6 +1281,10 @@ export const useAppStore = create<AppState>()(
         loggers.app.error('设置托盘选项失败:', err);
       }
     },
+
+    // 游戏路径设置（窗口未找到时自动启动游戏）
+    gamePath: '',
+    setGamePath: (path) => set({ gamePath: path }),
 
     // 新用户引导
     onboardingCompleted: false,
@@ -1662,6 +1667,7 @@ function generateConfig(): MxuConfig {
       autoRunOnLaunch: state.autoRunOnLaunch,
       autoStartRemovedInstanceName: state.autoStartRemovedInstanceName,
       minimizeToTray: state.minimizeToTray,
+      gamePath: state.gamePath,
       onboardingCompleted: state.onboardingCompleted,
       preActionConnectDelaySec: state.preActionConnectDelaySec,
       hotkeys: state.hotkeys,
@@ -1721,6 +1727,7 @@ useAppStore.subscribe(
     autoRunOnLaunch: state.autoRunOnLaunch,
     autoStartRemovedInstanceName: state.autoStartRemovedInstanceName,
     minimizeToTray: state.minimizeToTray,
+    gamePath: state.gamePath,
     onboardingCompleted: state.onboardingCompleted,
     hotkeys: state.hotkeys,
     recentlyClosed: state.recentlyClosed,

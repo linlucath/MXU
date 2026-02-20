@@ -97,6 +97,10 @@ export default {
     autoRunOnLaunch: 'Also auto-execute on manual launch',
     autoRunOnLaunchHint:
       'Automatically execute the selected configuration when manually opening the app (if disabled, only triggers on system startup)',
+    gamePath: 'Game Path',
+    gamePathHint:
+      'If no game window is found when starting tasks, launch this path and retry after 60 seconds',
+    gamePathPlaceholder: 'Select game executable path (e.g. xxx.exe)',
     confirmBeforeDelete: 'Confirm delete actions',
     confirmBeforeDeleteHint: 'Show confirmation before delete/clear list/import overwrite, etc.',
     maxLogsPerInstance: 'Max logs per instance',
@@ -286,6 +290,11 @@ export default {
     preActionFailed: 'Pre-program failed: {{error}}',
     preActionExitCode: 'Pre-program exit code: {{code}}',
     preActionConnectDelay: 'Waiting {{seconds}} seconds before connecting...',
+    gamePathNotSet: 'Game path is not set, cannot auto launch and retry',
+    autoLaunchGameStarting: 'Game window not found, launching game: {{path}}',
+    autoLaunchGameWaiting: 'Game launched, waiting {{seconds}} seconds before retry...',
+    autoLaunchGameRetrying: 'Retrying to find game window {{name}}',
+    autoLaunchGameFailed: 'Failed to auto launch game: {{error}}',
   },
 
   // Option Editor

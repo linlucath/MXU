@@ -84,6 +84,7 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
     language,
     // 调试设置
     tcpCompatMode,
+    gamePath,
   } = useAppStore();
 
   const [isStarting, setIsStarting] = useState(false);
@@ -283,9 +284,10 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
         schedulePolicyName?: string;
         /** 自动连接阶段变化回调（用于 UI 状态更新） */
         onPhaseChange?: (phase: AutoConnectPhase) => void;
+        hasRetriedAfterLaunch?: boolean;
       },
     ): Promise<boolean> => {
-      const { schedulePolicyName, onPhaseChange } = options || {};
+      const { schedulePolicyName, onPhaseChange, hasRetriedAfterLaunch } = options || {};
       const targetId = targetInstance.id;
       const targetTasks = targetInstance.selectedTasks || [];
 
@@ -442,6 +444,61 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
         // 如果未连接，尝试自动连接
         if (!isTargetConnected && controller) {
           const controllerType = controller.type;
+          const WINDOW_RETRY_DELAY_MS = 60_000;
+
+          const tryLaunchGameAndRetry = async (
+            missingWindowName?: string,
+          ): Promise<boolean | null> => {
+            if (controllerType !== 'Win32' && controllerType !== 'Gamepad') {
+              return null;
+            }
+            if (hasRetriedAfterLaunch) {
+              return null;
+            }
+
+            const path = gamePath.trim();
+            if (!path) {
+              log.warn(`实例 ${targetInstance.name}: 未设置游戏路径，跳过自动拉起`);
+              addLog(targetId, {
+                type: 'warning',
+                message: t('action.gamePathNotSet'),
+              });
+              return null;
+            }
+
+            log.info(`实例 ${targetInstance.name}: 未找到窗口，尝试启动游戏: ${path}`);
+            addLog(targetId, {
+              type: 'info',
+              message: t('action.autoLaunchGameStarting', { path }),
+            });
+
+            try {
+              await maaService.runAction(path, '', basePath, false);
+            } catch (launchErr) {
+              log.error(`实例 ${targetInstance.name}: 启动游戏失败:`, launchErr);
+              addLog(targetId, {
+                type: 'error',
+                message: t('action.autoLaunchGameFailed', { error: String(launchErr) }),
+              });
+              return false;
+            }
+
+            addLog(targetId, {
+              type: 'info',
+              message: t('action.autoLaunchGameWaiting', { seconds: 60 }),
+            });
+            await new Promise((resolve) => setTimeout(resolve, WINDOW_RETRY_DELAY_MS));
+
+            addLog(targetId, {
+              type: 'info',
+              message: t('action.autoLaunchGameRetrying', { name: missingWindowName || '' }),
+            });
+
+            return await startTasksForInstance(targetInstance, {
+              ...options,
+              hasRetriedAfterLaunch: true,
+            });
+          };
 
           await ensureMaaInitialized();
           await maaService.createInstance(targetId).catch((err) => {
@@ -485,6 +542,10 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
               const matchedWindow = windows.find((w) => w.window_name === savedDevice.windowName);
               if (!matchedWindow) {
                 log.warn(`实例 ${targetInstance.name}: 未找到窗口 ${savedDevice.windowName}`);
+                const retryResult = await tryLaunchGameAndRetry(savedDevice.windowName);
+                if (retryResult !== null) {
+                  return retryResult;
+                }
                 return false;
               }
               if (controllerType === 'Win32') {
@@ -545,6 +606,10 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
               const windows = await maaService.findWin32Windows(classRegex, windowRegex);
               if (windows.length === 0) {
                 log.warn(`实例 ${targetInstance.name}: 未搜索到任何窗口`);
+                const retryResult = await tryLaunchGameAndRetry();
+                if (retryResult !== null) {
+                  return retryResult;
+                }
                 addLog(targetId, {
                   type: 'error',
                   message: t('taskList.autoConnect.noWindowFound'),
@@ -850,6 +915,7 @@ export function Toolbar({ showAddPanel, onToggleAddPanel }: ToolbarProps) {
       clearScheduleExecution,
       setShowAddTaskPanel,
       addLog,
+      gamePath,
       t,
     ],
   );

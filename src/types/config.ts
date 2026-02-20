@@ -134,6 +134,8 @@ export interface AppSettings {
   autoStartRemovedInstanceName?: string; // 被删除的自动执行配置名称（用于提示用户）
   /** 前置动作轮询设备就绪后、连接前的额外延迟秒数（默认 5，仅通过编辑 mxu.json 修改） */
   preActionConnectDelaySec?: number;
+  /** 游戏可执行文件路径（用于未找到窗口时自动拉起游戏） */
+  gamePath?: string;
 }
 
 // MXU 配置文件完整结构

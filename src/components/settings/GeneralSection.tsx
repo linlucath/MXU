@@ -9,6 +9,7 @@ import {
   Power,
   Play,
   Rocket,
+  Gamepad2,
   ChevronDown,
   Check,
 } from 'lucide-react';
@@ -16,7 +17,7 @@ import {
 import { useAppStore } from '@/stores/appStore';
 import { defaultWindowSize } from '@/types/config';
 import { isTauri } from '@/utils/paths';
-import { SwitchButton } from '@/components/FormControls';
+import { FileField, SwitchButton } from '@/components/FormControls';
 import { FrameRateSelector } from '../FrameRateSelector';
 
 export function GeneralSection() {
@@ -36,6 +37,8 @@ export function GeneralSection() {
     autoRunOnLaunch,
     setAutoRunOnLaunch,
     autoStartRemovedInstanceName,
+    gamePath,
+    setGamePath,
   } = useAppStore();
 
   // 开机自启动状态（直接从 Tauri 插件查询，不走 store）
@@ -232,6 +235,27 @@ export function GeneralSection() {
             disabled={!autoStartInstanceId}
           />
         </div>
+      </div>
+
+      {/* 游戏路径（用于未找到窗口时自动拉起游戏） */}
+      <div className="bg-bg-secondary rounded-xl p-4 border border-border">
+        <div className="flex items-center gap-3 mb-3">
+          <Gamepad2 className="w-5 h-5 text-accent" />
+          <div>
+            <span className="font-medium text-text-primary">{t('settings.gamePath')}</span>
+            <p className="text-xs text-text-muted mt-0.5">{t('settings.gamePathHint')}</p>
+          </div>
+        </div>
+        <FileField
+          label={t('settings.gamePath')}
+          value={gamePath}
+          onChange={(value) => setGamePath(value.trim())}
+          placeholder={t('settings.gamePathPlaceholder')}
+          filters={[
+            { name: 'Executable', extensions: ['exe', 'bat', 'cmd', 'ps1', 'sh'] },
+            { name: 'All Files', extensions: ['*'] },
+          ]}
+        />
       </div>
 
       {/* ④ 最小化到托盘 */}
